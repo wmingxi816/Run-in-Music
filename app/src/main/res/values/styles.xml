@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.RunInMusic" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">#07110F</item>
+        <item name="android:statusBarColor">#F6F1E6</item>
+    </style>
+</resources>

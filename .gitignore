@@ -1,0 +1,17 @@
+.gradle/
+.kotlin/
+.idea/
+build/
+app/build/
+local.properties
+
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+.venv/
+*.pyc
+**/*.pyc
+*.db
+run_in_music.db
+
+*.iml

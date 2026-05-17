@@ -1,0 +1,72 @@
+[
+  {
+    "id": "qq-000QhABT1zNwjC",
+    "title": "探清水河",
+    "artist": "DJRE",
+    "durationSeconds": 330,
+    "bpm": 82,
+    "bpmSource": "provider",
+    "bpmConfidence": 0.86,
+    "energy": 78,
+    "popularity": 68,
+    "tags": ["国风", "电子", "稳定节奏"],
+    "qqUrl": "https://y.qq.com/n/ryqq/songDetail/000QhABT1zNwjC",
+    "neteaseUrl": ""
+  },
+  {
+    "id": "seed-night-run-088",
+    "title": "Night Run Pulse",
+    "artist": "Run in Music Lab",
+    "durationSeconds": 214,
+    "bpm": 88,
+    "bpmSource": "seed",
+    "bpmConfidence": 0.92,
+    "energy": 72,
+    "popularity": 54,
+    "tags": ["夜跑", "律动", "轻快"],
+    "qqUrl": "https://y.qq.com/",
+    "neteaseUrl": "https://music.163.com/"
+  },
+  {
+    "id": "seed-interval-100",
+    "title": "Interval Spark",
+    "artist": "Run in Music Lab",
+    "durationSeconds": 192,
+    "bpm": 100,
+    "bpmSource": "analysis",
+    "bpmConfidence": 0.81,
+    "energy": 90,
+    "popularity": 61,
+    "tags": ["间歇跑", "高能", "电子"],
+    "qqUrl": "https://y.qq.com/",
+    "neteaseUrl": "https://music.163.com/"
+  },
+  {
+    "id": "seed-easy-074",
+    "title": "Easy Cadence",
+    "artist": "Run in Music Lab",
+    "durationSeconds": 236,
+    "bpm": 74,
+    "bpmSource": "analysis",
+    "bpmConfidence": 0.88,
+    "energy": 58,
+    "popularity": 48,
+    "tags": ["慢跑", "舒展", "稳定节奏"],
+    "qqUrl": "https://y.qq.com/",
+    "neteaseUrl": "https://music.163.com/"
+  },
+  {
+    "id": "seed-fast-168",
+    "title": "Double Step Drive",
+    "artist": "Run in Music Lab",
+    "durationSeconds": 205,
+    "bpm": 168,
+    "bpmSource": "analysis",
+    "bpmConfidence": 0.84,
+    "energy": 87,
+    "popularity": 57,
+    "tags": ["快跑", "摇滚", "冲刺"],
+    "qqUrl": "https://y.qq.com/",
+    "neteaseUrl": "https://music.163.com/"
+  }
+]
