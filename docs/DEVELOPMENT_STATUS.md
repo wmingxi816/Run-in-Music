@@ -4,13 +4,18 @@
 
 ## 当前阶段
 
-- 当前版本：Alpha 0.1 MVP 原型
+- 当前版本：Alpha 0.2 GPS 跑步记录首个切片
 - 当前日期：2026-05-18
 - 仓库地址：https://github.com/wmingxi816/Run-in-Music
 - 当前主线分支：`main`
 - 最近已推送提交：
   - `64bc333 Initial Run in Music MVP`
   - `15b91fd Add backend catalog sync`
+  - `b64076c Add development status roadmap`
+  - `e7c8329 Plan GPS run tracking loop`
+  - `d3af205 Add run metrics tracker`
+  - `7817209 Add run tracking state controller`
+  - `54de90b Add GPS run tracking loop`
 
 ## 已完成
 
@@ -46,7 +51,13 @@
   - 模拟器默认地址：`http://10.0.2.2:8000`
   - 自动跳过没有 BPM 的歌曲
   - 同步后写入 Room
-- 已预留 `RunTrackingService` 前台定位服务骨架。
+- 已实现 GPS 跑步记录首个切片：
+  - `RunMetricsTracker` 负责纯 Kotlin 距离累计、时长和平均配速计算。
+  - `RunTrackingController` / `RunTrackingStore` 暴露 `Idle`、`Running`、`Finished` 状态。
+  - `RunTrackingService` 支持开始 / 结束跑步，定位回调累计 GPS 距离。
+  - 结束跑步后写入 `RunSessionEntity`。
+  - 首页新增跑步记录卡片，展示时长、距离、配速和最近一次跑步摘要。
+  - 运动识别权限和跑步定位权限已拆分请求。
 
 ### Python 后台
 
@@ -87,6 +98,9 @@
   - disliked 歌曲排除
   - 后台曲库 JSON 解析
   - 缺少 BPM 歌曲跳过
+  - GPS 距离累计
+  - 平均配速计算
+  - 跑步状态流转
 - 后台 pytest 已覆盖：
   - BPM 候选生成
   - BPM 归一化
@@ -106,12 +120,10 @@
 
 ### Android App
 
-- GPS 距离累计未完成，目前只有前台服务和定位请求骨架。
-- 跑步状态未完成，还没有 `开始跑步 / 结束跑步 / 保存记录` 的完整流程。
-- `RunSessionEntity` 还没有真实写入跑步记录。
-- 首页没有跑步中状态、实时距离、时长、配速展示。
+- GPS 距离累计已有首版实现，但还没有真机或模拟器路线回放验收。
+- 跑步记录保存已有首版实现，但还没有覆盖异常中断、服务被系统杀死后的恢复。
 - 跑步历史页未实现。
-- 权限流还比较粗糙，目前运动识别、定位、通知权限的请求时机需要拆分。
+- 权限流已拆分运动识别和定位请求，但还需要补更细的拒绝后引导文案。
 - 后台曲库同步地址目前写死为模拟器地址，真机需要可配置局域网地址。
 - 没有真机传感器/GPS 验收记录。
 
@@ -140,7 +152,9 @@
 
 目标：让 App 从“音乐推荐 demo”变成“能真实试跑的跑步 App”。
 
-要做：
+状态：首个实现切片已完成，下一步要做真实设备 / 模拟器 GPS 验收和体验修补。
+
+已完成：
 
 - 完善 `RunTrackingService`，累计 GPS 距离。
 - 新增跑步状态模型：`Idle`、`Running`、`Finished`。
@@ -150,6 +164,13 @@
 - 首页展示跑步中卡片和最近一次跑步摘要。
 - 拆分定位权限请求，只在开始跑步时请求定位。
 - 为距离累计和配速计算补单元测试。
+
+仍需：
+
+- 在模拟器中用路线回放验证 GPS 更新后距离累计。
+- 在真机中验证定位权限、前台通知和后台持续记录。
+- 增加跑步历史页。
+- 为服务异常中断和权限拒绝补更明确的用户提示。
 
 验收标准：
 
@@ -240,7 +261,7 @@
 
 ## 当前工作项
 
-- 待开始：Alpha 0.2 跑步记录闭环。
+- 进行中：Alpha 0.2 GPS 跑步记录首个切片已实现并通过本地构建，下一步是真机 / 模拟器 GPS 验收。
 
 ## Decision Log
 
@@ -250,3 +271,5 @@
 - 2026-05-17：第一批 provider 为 QQ 音乐和网易云音乐。
 - 2026-05-17：Android 增加后台曲库同步，默认使用 `10.0.2.2:8000`。
 - 2026-05-18：下一阶段优先做 GPS 跑步记录闭环，而不是继续扩展高级音乐功能。
+- 2026-05-18：跑步距离和配速计算放在纯 Kotlin `core/run`，前台服务只负责定位输入和保存记录，避免 UI、GPS、Room 强耦合。
+- 2026-05-18：`RunTrackingService` 前台服务类型收窄为 `location`，不再声明 `health`，减少 Android 14+ 额外权限风险。

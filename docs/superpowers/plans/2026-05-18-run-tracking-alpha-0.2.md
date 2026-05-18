@@ -18,7 +18,7 @@
 - Create: `app/src/main/java/com/runinmusic/app/core/run/RunMetricsTracker.kt`
 - Test: `app/src/test/java/com/runinmusic/app/core/run/RunMetricsTrackerTest.kt`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```kotlin
 @Test
@@ -31,17 +31,17 @@ fun accumulatesDistanceBetweenGpsSamples()
 fun computesAveragePaceSecondsPerKm()
 ```
 
-- [ ] **Step 2: Run tests to verify RED**
+- [x] **Step 2: Run tests to verify RED**
 
 Run: `.\gradlew.bat testDebugUnitTest --tests "com.runinmusic.app.core.run.RunMetricsTrackerTest"`
 
 Expected: compile failure because `RunMetricsTracker` does not exist.
 
-- [ ] **Step 3: Implement minimal pure Kotlin tracker**
+- [x] **Step 3: Implement minimal pure Kotlin tracker**
 
 Create immutable sample/snapshot data classes and a tracker that starts at `startedAtMillis`, ignores the first point for distance, uses haversine distance between accepted points, and calculates pace as `elapsedSeconds / (distanceMeters / 1000.0)`.
 
-- [ ] **Step 4: Run tests to verify GREEN**
+- [x] **Step 4: Run tests to verify GREEN**
 
 Run: `.\gradlew.bat testDebugUnitTest --tests "com.runinmusic.app.core.run.RunMetricsTrackerTest"`
 
@@ -53,15 +53,15 @@ Expected: tests pass.
 - Modify: `app/src/main/java/com/runinmusic/app/data/local/SongDao.kt`
 - Modify: `app/src/main/java/com/runinmusic/app/data/repository/MusicRepository.kt`
 
-- [ ] **Step 1: Add DAO query**
+- [x] **Step 1: Add DAO query**
 
 Add `observeLatestRunSession(): Flow<RunSessionEntity?>` sorted by `startedAtMillis DESC`.
 
-- [ ] **Step 2: Add repository methods**
+- [x] **Step 2: Add repository methods**
 
 Add `latestRunSession` and `saveRunSession(...)` so UI/service code does not call DAO directly except inside the service persistence boundary.
 
-- [ ] **Step 3: Run unit tests**
+- [x] **Step 3: Run unit tests**
 
 Run: `.\gradlew.bat testDebugUnitTest`
 
@@ -74,15 +74,15 @@ Expected: existing tests remain green.
 - Create: `app/src/main/java/com/runinmusic/app/location/RunTrackingStore.kt`
 - Modify: `app/src/main/java/com/runinmusic/app/location/RunTrackingService.kt`
 
-- [ ] **Step 1: Add tracking state**
+- [x] **Step 1: Add tracking state**
 
 Define `Idle`, `Running`, and `Finished` state through fields on `RunTrackingState`: `isRunning`, `startedAtMillis`, `endedAtMillis`, `elapsedMillis`, `distanceMeters`, and `averagePaceSecondsPerKm`.
 
-- [ ] **Step 2: Wire service actions**
+- [x] **Step 2: Wire service actions**
 
 Add `ACTION_START` and `ACTION_STOP`. Start requests location updates, update store on each GPS point, stop removes updates and persists a finished `RunSessionEntity` when duration is positive.
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 Run: `.\gradlew.bat assembleDebug`
 
@@ -95,19 +95,19 @@ Expected: debug APK builds.
 - Modify: `app/src/main/java/com/runinmusic/app/feature/home/HomeViewModel.kt`
 - Modify: `app/src/main/java/com/runinmusic/app/feature/home/HomeScreen.kt`
 
-- [ ] **Step 1: Split permissions**
+- [x] **Step 1: Split permissions**
 
 Measurement requests only `ACTIVITY_RECOGNITION`. Run tracking requests location and notification permissions when the user taps start run.
 
-- [ ] **Step 2: Observe run state**
+- [x] **Step 2: Observe run state**
 
 `HomeViewModel` collects `RunTrackingStore.state` and `MusicRepository.latestRunSession`.
 
-- [ ] **Step 3: Add run card**
+- [x] **Step 3: Add run card**
 
 Show start/stop controls, elapsed time, distance in km, average pace, and latest saved run summary.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `.\gradlew.bat testDebugUnitTest` and `.\gradlew.bat assembleDebug`.
 
@@ -118,7 +118,7 @@ Expected: tests and build pass.
 **Files:**
 - Modify: `docs/DEVELOPMENT_STATUS.md`
 
-- [ ] **Step 1: Update current work item**
+- [x] **Step 1: Update current work item**
 
 Mark Alpha 0.2 GPS tracking slice as in progress or completed, depending on verification.
 
