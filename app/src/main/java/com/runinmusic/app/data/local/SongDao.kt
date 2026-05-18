@@ -28,4 +28,7 @@ interface SongDao {
 
     @Insert
     suspend fun insertRunSession(session: RunSessionEntity): Long
+
+    @Query("SELECT * FROM run_sessions ORDER BY startedAtMillis DESC LIMIT 1")
+    fun observeLatestRunSession(): Flow<RunSessionEntity?>
 }

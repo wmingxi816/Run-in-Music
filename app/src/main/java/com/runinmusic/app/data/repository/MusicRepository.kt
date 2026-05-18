@@ -3,6 +3,7 @@ package com.runinmusic.app.data.repository
 import android.content.Context
 import com.runinmusic.app.core.model.SongInteractionType
 import com.runinmusic.app.data.local.RunInMusicDatabase
+import com.runinmusic.app.data.local.RunSessionEntity
 import com.runinmusic.app.data.local.SongEntity
 import com.runinmusic.app.data.local.SongInteractionEntity
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,7 @@ class MusicRepository(
     private val backendCatalogClient: BackendCatalogClient = BackendCatalogClient(),
 ) {
     val songs = database.songDao().observeSongs().map { rows -> rows.map { it.toCandidate() } }
+    val latestRunSession = database.songDao().observeLatestRunSession()
 
     suspend fun seedCatalogIfEmpty() {
         if (database.songDao().countSongs() > 0) return
@@ -69,6 +71,26 @@ class MusicRepository(
             .filter { it.action == SongInteractionType.Disliked.name || it.action == SongInteractionType.Skipped.name }
             .map { it.songId }
             .toSet()
+    }
+
+    suspend fun saveRunSession(
+        startedAtMillis: Long,
+        endedAtMillis: Long,
+        distanceMeters: Double,
+        averagePaceSecondsPerKm: Double?,
+        measuredSpm: Double?,
+        targetBpm: Double?,
+    ): Long {
+        return database.songDao().insertRunSession(
+            RunSessionEntity(
+                startedAtMillis = startedAtMillis,
+                endedAtMillis = endedAtMillis,
+                distanceMeters = distanceMeters,
+                averagePaceSecondsPerKm = averagePaceSecondsPerKm,
+                measuredSpm = measuredSpm,
+                targetBpm = targetBpm,
+            ),
+        )
     }
 
     private fun readSeedCatalog(): List<SongEntity> {

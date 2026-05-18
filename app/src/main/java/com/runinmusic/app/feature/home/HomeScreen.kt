@@ -43,12 +43,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.runinmusic.app.core.model.RecommendedSong
 import com.runinmusic.app.core.model.SongCandidate
+import com.runinmusic.app.data.local.RunSessionEntity
+import com.runinmusic.app.location.RunTrackingState
 import kotlin.math.roundToInt
 
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
     onStartMeasurement: () -> Unit,
+    onStartRun: () -> Unit,
+    onStopRun: () -> Unit,
     onOpenSong: (SongCandidate) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -77,6 +81,15 @@ fun HomeScreen(
                 )
             }
             item {
+                RunTrackingCard(
+                    runState = state.runTrackingState,
+                    latestRunSession = state.latestRunSession,
+                    message = state.runStatusMessage,
+                    onStartRun = onStartRun,
+                    onStopRun = onStopRun,
+                )
+            }
+            item {
                 CatalogSyncCard(
                     state = state,
                     onRefreshCatalog = viewModel::refreshBackendCatalog,
@@ -102,6 +115,96 @@ fun HomeScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RunTrackingCard(
+    runState: RunTrackingState,
+    latestRunSession: RunSessionEntity?,
+    message: String,
+    onStartRun: () -> Unit,
+    onStopRun: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFDF8EC)),
+        shape = RoundedCornerShape(28.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = if (runState.isRunning) "跑步记录中" else "跑步记录",
+                        color = Color(0xFF101E1A),
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Text(
+                        text = if (runState.isRunning) "GPS 正在累计距离" else message,
+                        color = Color(0xFF557165),
+                        fontSize = 13.sp,
+                    )
+                }
+                Button(
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (runState.isRunning) Color(0xFF101E1A) else Color(0xFFFF7A1A),
+                        contentColor = Color(0xFFFDF8EC),
+                    ),
+                    shape = RoundedCornerShape(14.dp),
+                    onClick = if (runState.isRunning) onStopRun else onStartRun,
+                ) {
+                    Text(if (runState.isRunning) "结束" else "开跑")
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                RunMetricTile(label = "时长", value = formatElapsed(runState.elapsedMillis), modifier = Modifier.weight(1f))
+                RunMetricTile(label = "距离", value = formatDistance(runState.distanceMeters), modifier = Modifier.weight(1f))
+                RunMetricTile(label = "配速", value = formatPace(runState.averagePaceSecondsPerKm), modifier = Modifier.weight(1f))
+            }
+
+            latestRunSession?.let { session ->
+                Surface(color = Color(0xFFE7F2D8), shape = RoundedCornerShape(18.dp)) {
+                    Text(
+                        text = "上次跑步 ${formatDistance(session.distanceMeters)} · ${formatElapsed((session.endedAtMillis ?: session.startedAtMillis) - session.startedAtMillis)} · ${formatPace(session.averagePaceSecondsPerKm)}",
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        color = Color(0xFF2D483E),
+                        fontSize = 13.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RunMetricTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        color = Color(0xFFE7F2D8),
+        shape = RoundedCornerShape(18.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(text = value, color = Color(0xFF101E1A), fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Text(text = label, color = Color(0xFF557165), fontSize = 12.sp)
         }
     }
 }
@@ -329,4 +432,21 @@ private fun RhythmBackdrop() {
         drawCircle(color = orange, radius = size.width * 0.35f, center = Offset(size.width * 0.92f, size.height * 0.08f))
         drawCircle(color = green, radius = size.width * 0.45f, center = Offset(size.width * 0.05f, size.height * 0.48f))
     }
+}
+
+private fun formatElapsed(elapsedMillis: Long): String {
+    val totalSeconds = (elapsedMillis / 1_000L).coerceAtLeast(0L)
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return "%02d:%02d".format(minutes, seconds)
+}
+
+private fun formatDistance(distanceMeters: Double): String {
+    return "%.2f km".format(distanceMeters / 1_000.0)
+}
+
+private fun formatPace(secondsPerKm: Double?): String {
+    if (secondsPerKm == null || secondsPerKm <= 0.0) return "--"
+    val totalSeconds = secondsPerKm.roundToInt()
+    return "%d'%02d\"".format(totalSeconds / 60, totalSeconds % 60)
 }

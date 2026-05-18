@@ -8,7 +8,11 @@ import com.runinmusic.app.core.model.RecommendedSong
 import com.runinmusic.app.core.model.SongCandidate
 import com.runinmusic.app.core.model.SongInteractionType
 import com.runinmusic.app.core.recommendation.RecommendationEngine
+import com.runinmusic.app.data.local.RunSessionEntity
 import com.runinmusic.app.data.repository.MusicRepository
+import com.runinmusic.app.location.RunTrackingState
+import com.runinmusic.app.location.RunTrackingStatus
+import com.runinmusic.app.location.RunTrackingStore
 import com.runinmusic.app.sensor.CadenceMeasurer
 import com.runinmusic.app.sensor.CadenceResult
 import com.runinmusic.app.sensor.CadenceSource
@@ -28,6 +32,7 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = _uiState
 
     private var timerJob: Job? = null
+    private var runTimerJob: Job? = null
     private var latestSongs: List<SongCandidate> = emptyList()
 
     init {
@@ -36,6 +41,31 @@ class HomeViewModel(
             repository.songs.collect { songs ->
                 latestSongs = songs
                 recomputeRecommendations()
+            }
+        }
+        viewModelScope.launch {
+            RunTrackingStore.state.collect { runState ->
+                _uiState.update {
+                    it.copy(
+                        runTrackingState = runState,
+                        runStatusMessage = if (runState.status == RunTrackingStatus.Finished) {
+                            "本次跑步已保存到本机记录。"
+                        } else {
+                            it.runStatusMessage
+                        },
+                    )
+                }
+                if (runState.isRunning && runTimerJob == null) {
+                    startRunTicker()
+                } else if (!runState.isRunning) {
+                    runTimerJob?.cancel()
+                    runTimerJob = null
+                }
+            }
+        }
+        viewModelScope.launch {
+            repository.latestRunSession.collect { session ->
+                _uiState.update { it.copy(latestRunSession = session) }
             }
         }
     }
@@ -87,6 +117,10 @@ class HomeViewModel(
 
     fun recordOpened(songId: String) = recordInteraction(songId, SongInteractionType.Opened)
 
+    fun showRunTrackingMessage(message: String) {
+        _uiState.update { it.copy(runStatusMessage = message) }
+    }
+
     fun refreshBackendCatalog() {
         if (_uiState.value.isRefreshingCatalog) return
         _uiState.update {
@@ -120,6 +154,7 @@ class HomeViewModel(
     override fun onCleared() {
         cadenceMeasurer.stop()
         timerJob?.cancel()
+        runTimerJob?.cancel()
         super.onCleared()
     }
 
@@ -146,6 +181,15 @@ class HomeViewModel(
             }
             _uiState.update { it.copy(secondsRemaining = 0) }
             onFinished?.invoke()
+        }
+    }
+
+    private fun startRunTicker() {
+        runTimerJob = viewModelScope.launch {
+            while (true) {
+                delay(1_000L)
+                RunTrackingStore.tick()
+            }
         }
     }
 
@@ -214,6 +258,9 @@ data class HomeUiState(
     val measuredSpm: Double? = null,
     val targetBpm: Double? = null,
     val recommendations: List<RecommendedSong> = emptyList(),
+    val runTrackingState: RunTrackingState = RunTrackingState(),
+    val latestRunSession: RunSessionEntity? = null,
+    val runStatusMessage: String = "开始跑步后会记录 GPS 距离、时长和平均配速。",
     val catalogStatusMessage: String = "后台曲库同步可把爬取结果导入本机推荐。",
     val statusMessage: String = "点击测量步频，让音乐贴住你的脚步。",
 )
