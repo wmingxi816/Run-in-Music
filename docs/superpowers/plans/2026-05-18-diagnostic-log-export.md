@@ -17,7 +17,7 @@
 - Create: `app/src/main/java/com/runinmusic/app/core/diagnostics/DiagnosticExportBuilder.kt`
 - Test: `app/src/test/java/com/runinmusic/app/core/diagnostics/DiagnosticExportBuilderTest.kt`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Test that `DiagnosticExportBuilder` creates:
 - `diagnostics.json` with app/device/permission metadata.
@@ -25,17 +25,17 @@ Test that `DiagnosticExportBuilder` creates:
 - `run_sessions.csv` with run summaries.
 - `song_interactions.csv` with music behavior rows.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `.\gradlew.bat testDebugUnitTest --tests "com.runinmusic.app.core.diagnostics.DiagnosticExportBuilderTest"`
 
 Expected: compile failure because diagnostic classes do not exist.
 
-- [ ] **Step 3: Implement minimal builder**
+- [x] **Step 3: Implement minimal builder**
 
 Use pure data classes and `org.json` to generate deterministic output. Redact JSON keys containing `key`, `token`, `cookie`, `password`, or `secret`.
 
-- [ ] **Step 4: Run GREEN**
+- [x] **Step 4: Run GREEN**
 
 Run: `.\gradlew.bat testDebugUnitTest --tests "com.runinmusic.app.core.diagnostics.DiagnosticExportBuilderTest"`
 
@@ -47,21 +47,21 @@ Expected: tests pass.
 - Create: `app/src/main/java/com/runinmusic/app/core/diagnostics/DiagnosticZipWriter.kt`
 - Test: `app/src/test/java/com/runinmusic/app/core/diagnostics/DiagnosticZipWriterTest.kt`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Test that zip writer creates a zip file containing `diagnostics.json` and `events.jsonl`.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `.\gradlew.bat testDebugUnitTest --tests "com.runinmusic.app.core.diagnostics.DiagnosticZipWriterTest"`
 
 Expected: compile failure because `DiagnosticZipWriter` does not exist.
 
-- [ ] **Step 3: Implement minimal writer**
+- [x] **Step 3: Implement minimal writer**
 
 Write payload files with UTF-8 names/content into `run_in_music_diagnostics_<timestamp>.zip`.
 
-- [ ] **Step 4: Run GREEN**
+- [x] **Step 4: Run GREEN**
 
 Run: `.\gradlew.bat testDebugUnitTest --tests "com.runinmusic.app.core.diagnostics.DiagnosticZipWriterTest"`
 
@@ -75,19 +75,19 @@ Expected: tests pass.
 - Modify: `app/src/main/java/com/runinmusic/app/data/local/RunInMusicDatabase.kt`
 - Modify: `app/src/main/java/com/runinmusic/app/data/repository/MusicRepository.kt`
 
-- [ ] **Step 1: Add event entity and DAO methods**
+- [x] **Step 1: Add event entity and DAO methods**
 
 Add `app_events` table with `level`, `module`, `type`, `message`, `detailsJson`, and `createdAtMillis`.
 
-- [ ] **Step 2: Add Room migration**
+- [x] **Step 2: Add Room migration**
 
 Bump database version to `2` and add migration `1 -> 2` that creates `app_events`.
 
-- [ ] **Step 3: Add repository logging/export reads**
+- [x] **Step 3: Add repository logging/export reads**
 
 Add methods for logging app events, reading recent events, reading recent run sessions, and reading song interactions.
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `.\gradlew.bat testDebugUnitTest`
 
@@ -104,23 +104,23 @@ Expected: existing unit tests pass.
 - Modify: `app/src/main/java/com/runinmusic/app/feature/home/HomeViewModel.kt`
 - Modify: `app/src/main/java/com/runinmusic/app/feature/home/HomeScreen.kt`
 
-- [ ] **Step 1: Implement export service**
+- [x] **Step 1: Implement export service**
 
 Collect metadata, events, run sessions, and interactions; build payload; write zip under `cache/diagnostics`.
 
-- [ ] **Step 2: Add `FileProvider`**
+- [x] **Step 2: Add `FileProvider`**
 
 Expose only `cache-path name="diagnostics" path="diagnostics/"`.
 
-- [ ] **Step 3: Add UI button**
+- [x] **Step 3: Add UI button**
 
 Add a `导出日志` button on the home screen diagnostic card area and show export status.
 
-- [ ] **Step 4: Share zip**
+- [x] **Step 4: Share zip**
 
 Use `Intent.ACTION_SEND`, MIME `application/zip`, and `FLAG_GRANT_READ_URI_PERMISSION`.
 
-- [ ] **Step 5: Build**
+- [x] **Step 5: Build**
 
 Run: `.\gradlew.bat assembleDebug`
 
@@ -131,11 +131,11 @@ Expected: debug APK builds.
 **Files:**
 - Modify: `docs/DEVELOPMENT_STATUS.md`
 
-- [ ] **Step 1: Update status**
+- [x] **Step 1: Update status**
 
 Record that personal testing APK now supports one-tap diagnostic export.
 
-- [ ] **Step 2: Commit and push**
+- [x] **Step 2: Commit and push**
 
 Run:
 

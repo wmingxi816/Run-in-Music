@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-- 当前版本：Alpha 0.2 GPS 跑步记录首个切片
+- 当前版本：Alpha 0.2 GPS 跑步记录 + 诊断日志导出
 - 当前日期：2026-05-18
 - 仓库地址：https://github.com/wmingxi816/Run-in-Music
 - 当前主线分支：`main`
@@ -16,6 +16,10 @@
   - `d3af205 Add run metrics tracker`
   - `7817209 Add run tracking state controller`
   - `54de90b Add GPS run tracking loop`
+  - `c279529 Plan diagnostic log export`
+  - `15988cb Add diagnostic export payload builder`
+  - `e5dc2d9 Add structured app event storage`
+  - `11856d3 Add diagnostic log export UI`
 
 ## 已完成
 
@@ -58,6 +62,13 @@
   - 结束跑步后写入 `RunSessionEntity`。
   - 首页新增跑步记录卡片，展示时长、距离、配速和最近一次跑步摘要。
   - 运动识别权限和跑步定位权限已拆分请求。
+- 已实现一键诊断日志导出：
+  - 新增 `app_events` Room 事件表和 `1 -> 2` 数据库迁移。
+  - 记录歌曲交互、步频测量、曲库同步、跑步开始 / 结束、诊断导出等关键事件。
+  - 首页新增「诊断日志」卡片和「导出日志」按钮。
+  - 导出 zip 到 App cache，并通过 `FileProvider` 调起系统分享面板。
+  - zip 包含 `diagnostics.json`、`events.jsonl`、`run_sessions.csv`、`song_interactions.csv`。
+  - 导出时会脱敏 `key`、`token`、`cookie`、`password`、`secret` 等字段。
 
 ### Python 后台
 
@@ -101,6 +112,9 @@
   - GPS 距离累计
   - 平均配速计算
   - 跑步状态流转
+  - 诊断导出 payload 结构
+  - 诊断 zip 文件写入
+  - Room 记录到诊断模型映射
 - 后台 pytest 已覆盖：
   - BPM 候选生成
   - BPM 归一化
@@ -122,6 +136,8 @@
 
 - GPS 距离累计已有首版实现，但还没有真机或模拟器路线回放验收。
 - 跑步记录保存已有首版实现，但还没有覆盖异常中断、服务被系统杀死后的恢复。
+- 诊断日志导出已有首版实现，但还没有在真机上验证系统分享面板和实际 zip 内容。
+- 诊断日志第一版只导出摘要，不导出原始 GPS 坐标轨迹。
 - 跑步历史页未实现。
 - 权限流已拆分运动识别和定位请求，但还需要补更细的拒绝后引导文案。
 - 后台曲库同步地址目前写死为模拟器地址，真机需要可配置局域网地址。
@@ -261,7 +277,7 @@
 
 ## 当前工作项
 
-- 进行中：Alpha 0.2 GPS 跑步记录首个切片已实现并通过本地构建，下一步是真机 / 模拟器 GPS 验收。
+- 进行中：Alpha 0.2 GPS 跑步记录和一键诊断日志已实现并通过本地构建，下一步是真机 / 模拟器 GPS 验收和日志 zip 内容验收。
 
 ## Decision Log
 
@@ -273,3 +289,5 @@
 - 2026-05-18：下一阶段优先做 GPS 跑步记录闭环，而不是继续扩展高级音乐功能。
 - 2026-05-18：跑步距离和配速计算放在纯 Kotlin `core/run`，前台服务只负责定位输入和保存记录，避免 UI、GPS、Room 强耦合。
 - 2026-05-18：`RunTrackingService` 前台服务类型收窄为 `location`，不再声明 `health`，减少 Android 14+ 额外权限风险。
+- 2026-05-18：诊断日志默认只导出摘要和事件流水，不导出原始 GPS 坐标；如需轨迹文件，后续单独加显式开关。
+- 2026-05-18：诊断包通过 `FileProvider` 暴露 cache 下的 zip，不直接暴露 Room 数据库文件。
