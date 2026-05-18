@@ -87,6 +87,36 @@ class HomeViewModel(
 
     fun recordOpened(songId: String) = recordInteraction(songId, SongInteractionType.Opened)
 
+    fun refreshBackendCatalog() {
+        if (_uiState.value.isRefreshingCatalog) return
+        _uiState.update {
+            it.copy(
+                isRefreshingCatalog = true,
+                catalogStatusMessage = "正在从后台同步曲库...",
+            )
+        }
+        viewModelScope.launch {
+            runCatching { repository.refreshCatalogFromBackend() }
+                .onSuccess { result ->
+                    _uiState.update {
+                        it.copy(
+                            isRefreshingCatalog = false,
+                            catalogStatusMessage = "已导入 ${result.importedCount} 首可推荐歌曲，跳过 ${result.skippedWithoutBpm} 首缺少 BPM 的歌曲。",
+                        )
+                    }
+                    recomputeRecommendations()
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isRefreshingCatalog = false,
+                            catalogStatusMessage = "同步失败：${error.message ?: "请确认后台服务已启动"}",
+                        )
+                    }
+                }
+        }
+    }
+
     override fun onCleared() {
         cadenceMeasurer.stop()
         timerJob?.cancel()
@@ -177,11 +207,13 @@ class HomeViewModel(
 data class HomeUiState(
     val isMeasuring: Boolean = false,
     val manualMode: Boolean = false,
+    val isRefreshingCatalog: Boolean = false,
     val secondsRemaining: Int = CadenceMapper.DEFAULT_MEASUREMENT_SECONDS,
     val manualTapCount: Int = 0,
     val lastSteps: Int? = null,
     val measuredSpm: Double? = null,
     val targetBpm: Double? = null,
     val recommendations: List<RecommendedSong> = emptyList(),
+    val catalogStatusMessage: String = "后台曲库同步可把爬取结果导入本机推荐。",
     val statusMessage: String = "点击测量步频，让音乐贴住你的脚步。",
 )

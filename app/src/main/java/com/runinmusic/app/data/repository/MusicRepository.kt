@@ -5,18 +5,33 @@ import com.runinmusic.app.core.model.SongInteractionType
 import com.runinmusic.app.data.local.RunInMusicDatabase
 import com.runinmusic.app.data.local.SongEntity
 import com.runinmusic.app.data.local.SongInteractionEntity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 
 class MusicRepository(
     private val context: Context,
     private val database: RunInMusicDatabase,
+    private val backendCatalogClient: BackendCatalogClient = BackendCatalogClient(),
 ) {
     val songs = database.songDao().observeSongs().map { rows -> rows.map { it.toCandidate() } }
 
     suspend fun seedCatalogIfEmpty() {
         if (database.songDao().countSongs() > 0) return
         database.songDao().upsertSongs(readSeedCatalog())
+    }
+
+    suspend fun refreshCatalogFromBackend(): CatalogRefreshResult = withContext(Dispatchers.IO) {
+        val parsed = backendCatalogClient.fetchCatalog()
+        if (parsed.songs.isNotEmpty()) {
+            database.songDao().upsertSongs(parsed.songs)
+        }
+        CatalogRefreshResult(
+            importedCount = parsed.songs.size,
+            skippedWithoutBpm = parsed.skippedWithoutBpm,
+            sourceUrl = BackendCatalogClient.DEFAULT_BASE_URL,
+        )
     }
 
     suspend fun recordInteraction(songId: String, type: SongInteractionType) {

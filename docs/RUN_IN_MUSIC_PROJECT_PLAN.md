@@ -36,6 +36,7 @@ MVP 同时建设一个 Python 后台数据管线：优先抓取/解析歌曲链�
 
 - Android App 原型：步频测量、SPM/BPM 显示、推荐列表、链接跳转、本地偏好。
 - FastAPI 后台原型：链接解析、歌曲入库、BPM 分析接口、曲库导出、推荐接口。
+- Android 曲库同步：模拟器默认从 `http://10.0.2.2:8000/catalog/export` 拉取后台曲库，跳过没有 BPM 的歌曲。
 - 测试：Android cadence/recommendation 单元测试，后台 provider/BPM/recommendation 单元测试。
 - 后续开发前持续更新本文件的 Decision Log 和 Future Additions。
 
@@ -53,8 +54,9 @@ MVP 同时建设一个 Python 后台数据管线：优先抓取/解析歌曲链�
 10. 实现网易云 provider：提取 `song id` 并解析基础元数据。
 11. 实现 BPM 分析服务：使用 librosa 分析音频文件，并保存候选 BPM。
 12. 实现后台曲库导出和推荐接口。
-13. 为算法、provider、推荐排序补测试。
-14. 后续逐步扩展歌单导入、截图 OCR、连续步频推荐、间歇跑模式、自动连播、账号同步。
+13. 实现 Android 后台曲库刷新入口：拉取 `/catalog/export`，导入 Room，显示成功/失败状态。
+14. 为算法、provider、推荐排序、后台曲库解析补测试。
+15. 后续逐步扩展歌单导入、截图 OCR、连续步频推荐、间歇跑模式、自动连播、账号同步。
 
 ## Notes
 
@@ -70,10 +72,11 @@ MVP 同时建设一个 Python 后台数据管线：优先抓取/解析歌曲链�
 - 2026-05-17: 后台采用 Python FastAPI + SQLAlchemy，默认 SQLite，保留 PostgreSQL 环境变量。
 - 2026-05-17: 第一批 provider 为 QQ 音乐和网易云音乐。
 - 2026-05-17: 第一版只做 10 秒步频测量，不做自动切歌。
+- 2026-05-17: Android 增加后台曲库刷新入口，默认使用模拟器访问宿主机的 `10.0.2.2:8000`。
 
 ## Future Additions
 
-- 后台导出曲库后 Android 一键刷新本地 Room。
+- 后台曲库刷新支持自定义服务器地址和自动增量同步。
 - 跑步中连续 30 秒滑动窗口步频推荐。
 - 间歇跑训练模式：阶段 BPM、语音提示、手动切歌入口。
 - 歌单链接导入和截图 OCR 歌曲识别。

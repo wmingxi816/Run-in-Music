@@ -63,6 +63,7 @@ dependencies {
     kapt(libs.androidx.room.compiler)
 
     testImplementation(libs.junit)
+    testImplementation(libs.org.json)
 }
 
 tasks.withType<Test>().configureEach {

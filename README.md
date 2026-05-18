@@ -12,11 +12,14 @@ The repository contains two parts:
 - 10-second cadence measurement with `TYPE_STEP_DETECTOR`.
 - Manual tap fallback for devices without a step detector or missing motion permission.
 - Local Room catalog and interaction storage.
+- Backend catalog refresh from `http://10.0.2.2:8000/catalog/export` on the Android emulator.
 - BPM matching with half/double BPM normalization.
 - External link opening with `Intent.ACTION_VIEW`.
 - Foreground GPS tracking service skeleton for later run-session distance tracking.
 
 Open the project in Android Studio from this repository root.
+
+For emulator catalog sync, start the backend locally first, then tap `刷新` in the `后台曲库` card. Songs without BPM are intentionally skipped on the Android side because they cannot be recommended by cadence yet.
 
 ## Backend MVP
 
@@ -35,6 +38,14 @@ Useful endpoints:
 - `POST /analysis/jobs`
 - `GET /catalog/export`
 - `GET /songs/recommend?target_bpm=80`
+
+Example local flow:
+
+```powershell
+Invoke-RestMethod -Method Post http://127.0.0.1:8000/providers/resolve-link `
+  -ContentType "application/json" `
+  -Body '{"url":"https://y.qq.com/n/ryqq/songDetail/000QhABT1zNwjC"}'
+```
 
 ## Documentation
 

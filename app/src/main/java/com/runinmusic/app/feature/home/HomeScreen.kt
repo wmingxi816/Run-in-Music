@@ -77,6 +77,12 @@ fun HomeScreen(
                 )
             }
             item {
+                CatalogSyncCard(
+                    state = state,
+                    onRefreshCatalog = viewModel::refreshBackendCatalog,
+                )
+            }
+            item {
                 Text(
                     text = "今日节奏推荐",
                     color = Color(0xFFFDF8EC),
@@ -95,6 +101,46 @@ fun HomeScreen(
                         onDislike = { viewModel.markDisliked(recommendation.song.id) },
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CatalogSyncCard(
+    state: HomeUiState,
+    onRefreshCatalog: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE7F2D8)),
+        shape = RoundedCornerShape(24.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "后台曲库",
+                    color = Color(0xFF101E1A),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    text = state.catalogStatusMessage,
+                    color = Color(0xFF2D483E),
+                    fontSize = 13.sp,
+                )
+            }
+            OutlinedButton(
+                enabled = !state.isRefreshingCatalog,
+                shape = RoundedCornerShape(14.dp),
+                onClick = onRefreshCatalog,
+            ) {
+                Text(if (state.isRefreshingCatalog) "同步中" else "刷新")
             }
         }
     }
