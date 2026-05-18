@@ -39,7 +39,7 @@ def test_import_generated_tracks_creates_catalog_rows(tmp_path):
     track = session.scalar(select(PlatformTrack).where(PlatformTrack.provider_track_id == row.track_id))
     assert track is not None
     assert track.provider == "generated"
-    assert track.url == f"generated://{row.track_id}"
+    assert track.url == f"/audio/generated/{row.track_id}"
 
     analysis = session.scalar(select(AudioAnalysis).where(AudioAnalysis.song_id == song.id))
     assert analysis is not None

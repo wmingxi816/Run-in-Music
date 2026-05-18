@@ -48,4 +48,38 @@ class RunTrackingControllerTest {
         assertFalse(finished.isRunning)
         assertEquals(finished, controller.state.value)
     }
+
+    @Test
+    fun pauseRunFreezesElapsedTimeAndIgnoresGpsUpdates() {
+        val controller = RunTrackingController()
+        controller.start(startedAtMillis = 0L)
+        controller.addLocation(RunLocationSample(latitude = 0.0, longitude = 0.0, accuracyMeters = 4f, timeMillis = 0L))
+        controller.tick(nowMillis = 60_000L)
+
+        controller.pause(pausedAtMillis = 60_000L)
+        controller.addLocation(RunLocationSample(latitude = 0.0, longitude = 0.001, accuracyMeters = 4f, timeMillis = 90_000L))
+        controller.tick(nowMillis = 120_000L)
+
+        val state = controller.state.value
+        assertEquals(RunTrackingStatus.Paused, state.status)
+        assertEquals(60_000L, state.elapsedMillis)
+        assertEquals(0.0, state.distanceMeters, 0.001)
+        assertFalse(state.isRunning)
+        assertTrue(state.isPaused)
+    }
+
+    @Test
+    fun resumeRunContinuesElapsedTimeWithoutCountingPausedDuration() {
+        val controller = RunTrackingController()
+        controller.start(startedAtMillis = 0L)
+        controller.addLocation(RunLocationSample(latitude = 0.0, longitude = 0.0, accuracyMeters = 4f, timeMillis = 0L))
+
+        controller.pause(pausedAtMillis = 60_000L)
+        controller.resume(resumedAtMillis = 180_000L)
+        controller.tick(nowMillis = 240_000L)
+
+        val state = controller.state.value
+        assertEquals(RunTrackingStatus.Running, state.status)
+        assertEquals(120_000L, state.elapsedMillis)
+    }
 }

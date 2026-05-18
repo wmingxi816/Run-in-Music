@@ -22,7 +22,8 @@ class BackendCatalogClientTest {
                 "tags": ["电子", "稳定节奏"],
                 "platform_urls": {
                   "qq": "https://y.qq.com/n/ryqq/songDetail/abc",
-                  "netease": "https://music.163.com/song?id=1"
+                  "netease": "https://music.163.com/song?id=1",
+                  "generated": "/audio/generated/rim_084_test"
                 }
               },
               {
@@ -35,7 +36,7 @@ class BackendCatalogClientTest {
             ]
         """.trimIndent()
 
-        val result = parseCatalogJson(json)
+        val result = parseCatalogJson(json, baseUrl = "http://10.0.2.2:8000")
         val song = result.songs.single()
 
         assertEquals(1, result.skippedWithoutBpm)
@@ -46,6 +47,7 @@ class BackendCatalogClientTest {
         assertEquals("电子,稳定节奏", song.tagsCsv)
         assertEquals("https://y.qq.com/n/ryqq/songDetail/abc", song.qqUrl)
         assertEquals("https://music.163.com/song?id=1", song.neteaseUrl)
+        assertEquals("http://10.0.2.2:8000/audio/generated/rim_084_test", song.streamUrl)
     }
 
     @Test

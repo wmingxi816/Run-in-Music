@@ -12,6 +12,7 @@ data class SongCandidate(
     val tags: Set<String>,
     val qqUrl: String?,
     val neteaseUrl: String?,
+    val streamUrl: String? = null,
 )
 
 data class RecommendedSong(

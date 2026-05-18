@@ -9,6 +9,7 @@ from app.models import AudioAnalysis, PlatformTrack, Song
 
 GENERATED_PROVIDER = "generated"
 GENERATED_ARTIST = "Run in Music AI"
+GENERATED_AUDIO_ROUTE_PREFIX = "/audio/generated"
 
 
 def import_generated_tracks(session: Session, analyses: list[GeneratedTrackAnalysis]) -> int:
@@ -43,7 +44,7 @@ def import_generated_tracks(session: Session, analyses: list[GeneratedTrackAnaly
                 song_id=song.id,
                 provider=GENERATED_PROVIDER,
                 provider_track_id=analysis.track_id,
-                url=f"generated://{analysis.track_id}",
+                url=f"{GENERATED_AUDIO_ROUTE_PREFIX}/{analysis.track_id}",
             ),
         )
         session.add(

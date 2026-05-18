@@ -21,7 +21,7 @@ class BackendCatalogClient(
                 error("Backend returned HTTP ${connection.responseCode}")
             }
             val json = connection.inputStream.bufferedReader().use { it.readText() }
-            parseCatalogJson(json)
+            parseCatalogJson(json, baseUrl = baseUrl)
         } finally {
             connection.disconnect()
         }
@@ -43,7 +43,7 @@ data class CatalogRefreshResult(
     val sourceUrl: String,
 )
 
-fun parseCatalogJson(json: String): CatalogParseResult {
+fun parseCatalogJson(json: String, baseUrl: String = BackendCatalogClient.DEFAULT_BASE_URL): CatalogParseResult {
     val array = JSONArray(json)
     val songs = mutableListOf<SongEntity>()
     var skippedWithoutBpm = 0
@@ -54,14 +54,17 @@ fun parseCatalogJson(json: String): CatalogParseResult {
             skippedWithoutBpm += 1
             continue
         }
-        songs += item.toSongEntity()
+        songs += item.toSongEntity(baseUrl)
     }
 
     return CatalogParseResult(songs = songs, skippedWithoutBpm = skippedWithoutBpm)
 }
 
-private fun org.json.JSONObject.toSongEntity(): SongEntity {
+private fun org.json.JSONObject.toSongEntity(baseUrl: String): SongEntity {
     val platformUrls = optJSONObject("platform_urls")
+    val generatedUrl = platformUrls?.optString("generated")?.takeIf { it.isNotBlank() }
+        ?: optString("stream_url").takeIf { it.isNotBlank() }
+        ?: optString("streamUrl").takeIf { it.isNotBlank() }
     return SongEntity(
         id = getString("id"),
         title = getString("title"),
@@ -79,7 +82,15 @@ private fun org.json.JSONObject.toSongEntity(): SongEntity {
             ?: optString("qqUrl").takeIf { it.isNotBlank() },
         neteaseUrl = platformUrls?.optString("netease")?.takeIf { it.isNotBlank() }
             ?: optString("neteaseUrl").takeIf { it.isNotBlank() },
+        streamUrl = generatedUrl?.toAbsoluteUrl(baseUrl),
     )
+}
+
+private fun String.toAbsoluteUrl(baseUrl: String): String {
+    if (startsWith("http://") || startsWith("https://")) return this
+    val normalizedBase = baseUrl.trimEnd('/')
+    val normalizedPath = if (startsWith("/")) this else "/$this"
+    return "$normalizedBase$normalizedPath"
 }
 
 private fun org.json.JSONObject.optNullableInt(name: String): Int? {

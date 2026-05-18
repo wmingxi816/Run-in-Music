@@ -3,6 +3,7 @@ package com.runinmusic.app.location
 enum class RunTrackingStatus {
     Idle,
     Running,
+    Paused,
     Finished,
 }
 
@@ -16,4 +17,7 @@ data class RunTrackingState(
 ) {
     val isRunning: Boolean
         get() = status == RunTrackingStatus.Running
+
+    val isPaused: Boolean
+        get() = status == RunTrackingStatus.Paused
 }

@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -17,6 +18,7 @@ import com.runinmusic.app.diagnostics.DiagnosticShareLauncher
 import com.runinmusic.app.feature.home.HomeScreen
 import com.runinmusic.app.feature.home.HomeViewModel
 import com.runinmusic.app.location.RunTrackingService
+import com.runinmusic.app.playback.MusicPlaybackController
 import com.runinmusic.app.sensor.CadenceMeasurer
 import com.runinmusic.app.ui.theme.RunInMusicTheme
 
@@ -34,6 +36,10 @@ class MainActivity : ComponentActivity() {
                 val viewModel: HomeViewModel = viewModel(
                     factory = HomeViewModel.factory(repository, cadenceMeasurer, diagnosticExportService),
                 )
+                val musicPlaybackController = remember { MusicPlaybackController() }
+                DisposableEffect(Unit) {
+                    onDispose { musicPlaybackController.stop() }
+                }
                 val activityPermissions = remember {
                     buildList {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -91,6 +97,14 @@ class MainActivity : ComponentActivity() {
                         viewModel.showRunTrackingMessage("正在结束并保存本次跑步。")
                         startService(RunTrackingService.stopIntent(applicationContext))
                     },
+                    onPauseRun = {
+                        viewModel.showRunTrackingMessage("已暂停 GPS 记录，继续后会从当前位置重新接上。")
+                        startService(RunTrackingService.pauseIntent(applicationContext))
+                    },
+                    onResumeRun = {
+                        viewModel.showRunTrackingMessage("已继续记录 GPS 跑步。")
+                        startService(RunTrackingService.resumeIntent(applicationContext))
+                    },
                     onExportDiagnostics = {
                         viewModel.exportDiagnostics { file ->
                             DiagnosticShareLauncher.share(this, file)
@@ -98,7 +112,16 @@ class MainActivity : ComponentActivity() {
                     },
                     onOpenSong = { song ->
                         viewModel.recordOpened(song.id)
-                        MusicLinkOpener.open(applicationContext, song)
+                        if (song.streamUrl != null) {
+                            viewModel.showPlaybackPreparing(song)
+                            musicPlaybackController.play(
+                                url = song.streamUrl,
+                                onPrepared = { viewModel.showPlaybackStarted(song) },
+                                onError = viewModel::showPlaybackFailed,
+                            )
+                        } else {
+                            MusicLinkOpener.open(applicationContext, song)
+                        }
                     },
                 )
             }

@@ -44,6 +44,7 @@ class HomeViewModel(
             repository.seedCatalogIfEmpty()
             repository.songs.collect { songs ->
                 latestSongs = songs
+                _uiState.update { it.copy(catalogSongCount = songs.size) }
                 recomputeRecommendations()
             }
         }
@@ -70,6 +71,11 @@ class HomeViewModel(
         viewModelScope.launch {
             repository.latestRunSession.collect { session ->
                 _uiState.update { it.copy(latestRunSession = session) }
+            }
+        }
+        viewModelScope.launch {
+            repository.recentRunSessions.collect { sessions ->
+                _uiState.update { it.copy(recentRunSessions = sessions) }
             }
         }
     }
@@ -120,6 +126,30 @@ class HomeViewModel(
     fun markDisliked(songId: String) = recordInteraction(songId, SongInteractionType.Disliked)
 
     fun recordOpened(songId: String) = recordInteraction(songId, SongInteractionType.Opened)
+
+    fun showPlaybackPreparing(song: SongCandidate) {
+        _uiState.update {
+            it.copy(
+                nowPlayingTitle = song.title,
+                playbackStatusMessage = "正在从服务器加载：${song.title}",
+            )
+        }
+    }
+
+    fun showPlaybackStarted(song: SongCandidate) {
+        _uiState.update {
+            it.copy(
+                nowPlayingTitle = song.title,
+                playbackStatusMessage = "正在播放：${song.title}",
+            )
+        }
+    }
+
+    fun showPlaybackFailed(message: String) {
+        _uiState.update {
+            it.copy(playbackStatusMessage = "播放失败：$message")
+        }
+    }
 
     fun selectMeasurementSeconds(seconds: Int) {
         if (seconds !in CadenceMapper.SUPPORTED_MEASUREMENT_SECONDS || _uiState.value.isMeasuring) return
@@ -189,6 +219,7 @@ class HomeViewModel(
                     _uiState.update {
                         it.copy(
                             isRefreshingCatalog = false,
+                            lastCatalogSyncAtMillis = System.currentTimeMillis(),
                             catalogStatusMessage = "已导入 ${result.importedCount} 首可推荐歌曲，跳过 ${result.skippedWithoutBpm} 首缺少 BPM 的歌曲。",
                         )
                     }
@@ -340,9 +371,14 @@ data class HomeUiState(
     val recommendations: List<RecommendedSong> = emptyList(),
     val runTrackingState: RunTrackingState = RunTrackingState(),
     val latestRunSession: RunSessionEntity? = null,
+    val recentRunSessions: List<RunSessionEntity> = emptyList(),
     val runStatusMessage: String = "开始跑步后会记录 GPS 距离、时长和平均配速。",
     val isExportingDiagnostics: Boolean = false,
     val diagnosticStatusMessage: String = "导出一个 zip，里面包含跑步摘要、歌曲行为、权限状态和错误日志。",
-    val catalogStatusMessage: String = "后台曲库同步可把爬取结果导入本机推荐。",
+    val catalogSongCount: Int = 0,
+    val lastCatalogSyncAtMillis: Long? = null,
+    val catalogStatusMessage: String = "从服务器曲库同步歌曲元数据；音频播放时从服务器串流，不保存到手机。",
+    val nowPlayingTitle: String? = null,
+    val playbackStatusMessage: String = "AI 曲库歌曲会从服务器串流播放，不会保存到手机。",
     val statusMessage: String = "点击测量步频，让音乐贴住你的脚步。",
 )

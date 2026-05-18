@@ -3,9 +3,12 @@ from tempfile import NamedTemporaryFile
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.ai_music.storage import generated_audio_path
+from app.core.config import get_settings
 from app.core.database import get_session
 from app.models import AudioAnalysis, CrawlJob, Song
 from app.providers.registry import provider_for_url
@@ -100,6 +103,17 @@ async def create_analysis_job(payload: AnalysisJobRequest, session: Session = De
 @router.get("/catalog/export")
 def export_catalog(session: Session = Depends(get_session)):
     return list_catalog(session)
+
+
+@router.get("/audio/generated/{track_id}")
+def serve_generated_audio(track_id: str):
+    try:
+        path = generated_audio_path(track_id, Path(get_settings().generated_music_dir))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Generated audio file not found")
+    return FileResponse(path, media_type="audio/wav", filename=path.name)
 
 
 @router.get("/songs/recommend")

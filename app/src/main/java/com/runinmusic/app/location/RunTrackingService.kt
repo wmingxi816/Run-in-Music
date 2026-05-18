@@ -56,9 +56,19 @@ class RunTrackingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
-            stopRun()
-            return START_NOT_STICKY
+        when (intent?.action) {
+            ACTION_STOP -> {
+                stopRun()
+                return START_NOT_STICKY
+            }
+            ACTION_PAUSE -> {
+                pauseRun()
+                return START_NOT_STICKY
+            }
+            ACTION_RESUME -> {
+                resumeRun()
+                return START_NOT_STICKY
+            }
         }
 
         startForeground(NOTIFICATION_ID, notification())
@@ -92,6 +102,26 @@ class RunTrackingService : Service() {
             .setMinUpdateDistanceMeters(3f)
             .build()
         client.requestLocationUpdates(request, callback, mainLooper)
+    }
+
+    private fun pauseRun() {
+        client.removeLocationUpdates(callback)
+        RunTrackingStore.pause()
+        logEvent(
+            type = "run_paused",
+            message = "Run tracking paused",
+            detailsJson = null,
+        )
+    }
+
+    private fun resumeRun() {
+        RunTrackingStore.resume()
+        logEvent(
+            type = "run_resumed",
+            message = "Run tracking resumed",
+            detailsJson = null,
+        )
+        requestLocationUpdatesIfAllowed()
     }
 
     private fun stopRun() {
@@ -177,6 +207,8 @@ class RunTrackingService : Service() {
     companion object {
         private const val ACTION_START = "com.runinmusic.app.location.START_RUN"
         private const val ACTION_STOP = "com.runinmusic.app.location.STOP_RUN"
+        private const val ACTION_PAUSE = "com.runinmusic.app.location.PAUSE_RUN"
+        private const val ACTION_RESUME = "com.runinmusic.app.location.RESUME_RUN"
         private const val CHANNEL_ID = "run_tracking"
         private const val NOTIFICATION_ID = 42
 
@@ -186,6 +218,14 @@ class RunTrackingService : Service() {
 
         fun stopIntent(context: Context): Intent {
             return Intent(context, RunTrackingService::class.java).setAction(ACTION_STOP)
+        }
+
+        fun pauseIntent(context: Context): Intent {
+            return Intent(context, RunTrackingService::class.java).setAction(ACTION_PAUSE)
+        }
+
+        fun resumeIntent(context: Context): Intent {
+            return Intent(context, RunTrackingService::class.java).setAction(ACTION_RESUME)
         }
     }
 }

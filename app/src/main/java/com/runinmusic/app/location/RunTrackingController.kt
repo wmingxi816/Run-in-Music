@@ -22,12 +22,25 @@ class RunTrackingController {
     }
 
     fun addLocation(sample: RunLocationSample) {
+        if (_state.value.status != RunTrackingStatus.Running) return
         val snapshot = tracker?.addSample(sample) ?: return
         _state.value = snapshot.toState(RunTrackingStatus.Running, endedAtMillis = null)
     }
 
     fun tick(nowMillis: Long) {
         val snapshot = tracker?.snapshotAt(nowMillis) ?: return
+        _state.value = snapshot.toState(_state.value.status, endedAtMillis = null)
+    }
+
+    fun pause(pausedAtMillis: Long) {
+        if (_state.value.status != RunTrackingStatus.Running) return
+        val snapshot = tracker?.pause(pausedAtMillis) ?: return
+        _state.value = snapshot.toState(RunTrackingStatus.Paused, endedAtMillis = null)
+    }
+
+    fun resume(resumedAtMillis: Long) {
+        if (_state.value.status != RunTrackingStatus.Paused) return
+        val snapshot = tracker?.resume(resumedAtMillis) ?: return
         _state.value = snapshot.toState(RunTrackingStatus.Running, endedAtMillis = null)
     }
 

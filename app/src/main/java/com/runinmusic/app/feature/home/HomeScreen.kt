@@ -54,6 +54,9 @@ import com.runinmusic.app.core.model.RecommendedSong
 import com.runinmusic.app.core.model.SongCandidate
 import com.runinmusic.app.data.local.RunSessionEntity
 import com.runinmusic.app.location.RunTrackingState
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
@@ -62,6 +65,8 @@ fun HomeScreen(
     onStartMeasurement: () -> Unit,
     onStartRun: () -> Unit,
     onStopRun: () -> Unit,
+    onPauseRun: () -> Unit,
+    onResumeRun: () -> Unit,
     onExportDiagnostics: () -> Unit,
     onOpenSong: (SongCandidate) -> Unit,
 ) {
@@ -99,6 +104,8 @@ fun HomeScreen(
                     state = state,
                     onStartRun = onStartRun,
                     onStopRun = onStopRun,
+                    onPauseRun = onPauseRun,
+                    onResumeRun = onResumeRun,
                 )
                 HomeTab.Music -> MusicPage(
                     state = state,
@@ -131,6 +138,8 @@ private fun RunPage(
     state: HomeUiState,
     onStartRun: () -> Unit,
     onStopRun: () -> Unit,
+    onPauseRun: () -> Unit,
+    onResumeRun: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -146,8 +155,11 @@ private fun RunPage(
                 message = state.runStatusMessage,
                 onStartRun = onStartRun,
                 onStopRun = onStopRun,
+                onPauseRun = onPauseRun,
+                onResumeRun = onResumeRun,
             )
         }
+        item { RunHistorySection(state.recentRunSessions) }
         item { RunPlanSection() }
         item { Spacer(modifier = Modifier.height(8.dp)) }
     }
@@ -179,6 +191,7 @@ private fun MusicPage(
                 onExpandMeasurementPanel = onExpandMeasurementPanel,
             )
         }
+        item { NowPlayingCard(state) }
         item {
             Text(
                 text = "节奏音乐推荐",
@@ -202,6 +215,19 @@ private fun MusicPage(
             }
         }
         item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun NowPlayingCard(state: HomeUiState) {
+    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFE7F2D8)), shape = RoundedCornerShape(24.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = "内置播放器", color = Color(0xFF101E1A), fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Text(text = state.playbackStatusMessage, color = Color(0xFF2D483E), fontSize = 13.sp)
+            state.nowPlayingTitle?.let {
+                Text(text = "当前：$it", color = Color(0xFFFF7A1A), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 
@@ -300,6 +326,8 @@ private fun RunTrackingCard(
     message: String,
     onStartRun: () -> Unit,
     onStopRun: () -> Unit,
+    onPauseRun: () -> Unit,
+    onResumeRun: () -> Unit,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFDF8EC)),
@@ -316,26 +344,34 @@ private fun RunTrackingCard(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = if (runState.isRunning) "跑步记录中" else "跑步记录",
+                        text = when {
+                            runState.isRunning -> "跑步记录中"
+                            runState.isPaused -> "跑步已暂停"
+                            else -> "跑步记录"
+                        },
                         color = Color(0xFF101E1A),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Black,
                     )
                     Text(
-                        text = if (runState.isRunning) "GPS 正在累计距离" else message,
+                        text = when {
+                            runState.isRunning -> "GPS 正在累计距离"
+                            runState.isPaused -> "计时和定位已暂停，继续后不会计算暂停间隔。"
+                            else -> message
+                        },
                         color = Color(0xFF557165),
                         fontSize = 13.sp,
                     )
                 }
                 Button(
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (runState.isRunning) Color(0xFF101E1A) else Color(0xFFFF7A1A),
+                        containerColor = if (runState.isRunning || runState.isPaused) Color(0xFF101E1A) else Color(0xFFFF7A1A),
                         contentColor = Color(0xFFFDF8EC),
                     ),
                     shape = RoundedCornerShape(14.dp),
-                    onClick = if (runState.isRunning) onStopRun else onStartRun,
+                    onClick = if (runState.isRunning || runState.isPaused) onStopRun else onStartRun,
                 ) {
-                    Text(if (runState.isRunning) "结束" else "开跑")
+                    Text(if (runState.isRunning || runState.isPaused) "结束" else "开跑")
                 }
             }
 
@@ -350,15 +386,15 @@ private fun RunTrackingCard(
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
-                    enabled = runState.isRunning,
+                    enabled = runState.isRunning || runState.isPaused,
                     shape = RoundedCornerShape(14.dp),
-                    onClick = {},
+                    onClick = if (runState.isPaused) onResumeRun else onPauseRun,
                 ) {
-                    Text("暂停")
+                    Text(if (runState.isPaused) "继续" else "暂停")
                 }
                 Surface(color = Color(0xFFE7F2D8), shape = CircleShape) {
                     Text(
-                        text = "暂停功能下一步接入",
+                        text = if (runState.isPaused) "暂停中：距离不会跳算" else "暂停时会冻结计时",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         color = Color(0xFF2D483E),
                         fontSize = 12.sp,
@@ -399,6 +435,47 @@ private fun RunPlanSection() {
                     }
                     Surface(color = Color(0xFFE7F2D8), shape = CircleShape) {
                         Text(text = plan.badge, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color(0xFF2D483E), fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RunHistorySection(sessions: List<RunSessionEntity>) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(text = "最近跑步", color = Color(0xFFFDF8EC), fontSize = 24.sp, fontWeight = FontWeight.Black)
+        if (sessions.isEmpty()) {
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFDF8EC)), shape = RoundedCornerShape(24.dp)) {
+                Text(
+                    text = "完成一次跑步后，这里会显示最近记录。",
+                    modifier = Modifier.padding(18.dp),
+                    color = Color(0xFF557165),
+                    fontSize = 14.sp,
+                )
+            }
+        } else {
+            sessions.forEach { session ->
+                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFDF8EC)), shape = RoundedCornerShape(24.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(text = formatDistance(session.distanceMeters), color = Color(0xFF101E1A), fontSize = 20.sp, fontWeight = FontWeight.Black)
+                            Text(
+                                text = "${formatElapsed((session.endedAtMillis ?: session.startedAtMillis) - session.startedAtMillis)} · ${formatPace(session.averagePaceSecondsPerKm)}",
+                                color = Color(0xFF557165),
+                                fontSize = 13.sp,
+                            )
+                        }
+                        Surface(color = Color(0xFFE7F2D8), shape = CircleShape) {
+                            Text(text = "已保存", modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color(0xFF2D483E), fontSize = 12.sp)
+                        }
                     }
                 }
             }
@@ -449,6 +526,12 @@ private fun CatalogSyncCard(
                     color = Color(0xFF101E1A),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Black,
+                )
+                Text(
+                    text = "本地可推荐 ${state.catalogSongCount} 首 · ${state.lastCatalogSyncAtMillis?.let { "上次同步 ${formatClockTime(it)}" } ?: "尚未手动同步"}",
+                    color = Color(0xFFFF7A1A),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = state.catalogStatusMessage,
@@ -667,7 +750,7 @@ private fun SongCard(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(onClick = onOpen, shape = RoundedCornerShape(14.dp)) {
-                    Text("去听歌")
+                    Text(if (recommendation.song.streamUrl != null) "播放" else "去听歌")
                 }
                 OutlinedButton(onClick = onLike, shape = RoundedCornerShape(14.dp)) {
                     Text("喜欢")
@@ -718,6 +801,10 @@ private fun formatPace(secondsPerKm: Double?): String {
     if (secondsPerKm == null || secondsPerKm <= 0.0) return "--"
     val totalSeconds = secondsPerKm.roundToInt()
     return "%d'%02d\"".format(totalSeconds / 60, totalSeconds % 60)
+}
+
+private fun formatClockTime(timeMillis: Long): String {
+    return SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timeMillis))
 }
 
 private data class DemoRunPlan(

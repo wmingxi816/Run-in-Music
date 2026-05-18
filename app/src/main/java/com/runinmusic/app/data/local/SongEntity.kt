@@ -18,6 +18,7 @@ data class SongEntity(
     val tagsCsv: String,
     val qqUrl: String?,
     val neteaseUrl: String?,
+    val streamUrl: String?,
 ) {
     fun toCandidate(): SongCandidate = SongCandidate(
         id = id,
@@ -31,5 +32,6 @@ data class SongEntity(
         tags = tagsCsv.split(",").map { it.trim() }.filter { it.isNotBlank() }.toSet(),
         qqUrl = qqUrl,
         neteaseUrl = neteaseUrl,
+        streamUrl = streamUrl,
     )
 }

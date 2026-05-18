@@ -1,27 +1,31 @@
 # Run in Music
 
-Run in Music is an Android running music recommendation MVP. It measures a runner's cadence for 10 seconds, maps SPM to a target BPM, recommends matching songs from a local catalog, and opens the selected track in an external music app.
+Run in Music 是一个 Android 跑步音乐推荐 MVP。它可以测量跑者步频，把 SPM 映射为目标 BPM，从本地曲库中推荐节奏匹配的歌曲，并通过外部音乐 App 打开选中的曲目。
 
-The repository contains two parts:
+仓库包含两部分：
 
-- `app/`: Kotlin + Jetpack Compose Android app.
-- `backend/`: FastAPI song metadata, provider resolving, BPM analysis, and catalog export prototype.
+- `app/`：Kotlin + Jetpack Compose Android App。
+- `backend/`：FastAPI 后台原型，负责歌曲元数据、平台链接解析、BPM 分析和曲库导出。
 
 ## Android MVP
 
-- 10-second cadence measurement with `TYPE_STEP_DETECTOR`.
-- Manual tap fallback for devices without a step detector or missing motion permission.
-- Local Room catalog and interaction storage.
-- Backend catalog refresh from `http://10.0.2.2:8000/catalog/export` on the Android emulator.
-- BPM matching with half/double BPM normalization.
-- External link opening with `Intent.ACTION_VIEW`.
-- Foreground GPS tracking service skeleton for later run-session distance tracking.
+- 使用 `TYPE_STEP_DETECTOR` 测量步频，支持 10 / 20 / 30 / 60 秒测量。
+- 设备没有计步传感器或缺少运动权限时，提供手动点拍 fallback。
+- 使用 Room 保存本地曲库、歌曲交互和跑步记录。
+- Android 模拟器默认从 `http://10.0.2.2:8000/catalog/export` 刷新后台曲库。
+- BPM 匹配支持半速 / 倍速归一化，例如 160 SPM 可以匹配 80 BPM 歌曲。
+- 使用 `Intent.ACTION_VIEW` 打开外部音乐平台链接。
+- 已有前台 GPS 跑步记录服务骨架，用于记录跑步时长、距离和平均配速。
+- 跑步记录支持暂停 / 继续，并显示最近跑步记录。
+- 首页采用底部三栏：跑步 / 音乐 / 我的。
+- AI/generated 曲目支持 App 内置播放器串流播放，音乐文件保存在服务器端，不保存到用户手机。
+- 支持一键导出诊断日志 zip，便于真机测试和问题排查。
 
-Open the project in Android Studio from this repository root.
+请用 Android Studio 从仓库根目录打开项目。
 
-For emulator catalog sync, start the backend locally first, then tap `刷新` in the `后台曲库` card. Songs without BPM are intentionally skipped on the Android side because they cannot be recommended by cadence yet.
+如果要在模拟器里同步曲库，请先在本机启动后台，然后在 App 的 `后台曲库` 卡片点击 `刷新`。没有 BPM 的歌曲会被 Android 端跳过，因为它们暂时无法按步频推荐。
 
-## Backend MVP
+## 后台 MVP
 
 ```powershell
 cd backend
@@ -31,23 +35,24 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Useful endpoints:
+常用接口：
 
 - `POST /providers/resolve-link`
 - `POST /crawler/jobs`
 - `POST /analysis/jobs`
 - `GET /catalog/export`
+- `GET /audio/generated/{track_id}`
 - `GET /songs/recommend?target_bpm=80`
 
-Run backend tests from the repository root:
+从仓库根目录运行后端测试：
 
 ```powershell
 backend\.venv\Scripts\python.exe -m pytest
 ```
 
-AI music PoC modules live under `backend/app/ai_music/`. The current slice can plan 100 generated running tracks, wrap BPM analysis results, and import accepted AI tracks into the existing catalog tables. Real local music generation is the next step.
+AI 音乐 PoC 模块位于 `backend/app/ai_music/`。当前切片可以规划 100 首 AI 跑步音乐生成任务、生成可播放 WAV 占位音频、包装 BPM 分析结果，并把通过分析的 AI 曲目导入现有曲库表。音乐文件放在 `backend/generated_music/`，通过 `/audio/generated/{track_id}` 提供给 App 串流播放。下一步是把占位生成器替换为真实本地音乐生成器。
 
-Example local flow:
+本地调用示例：
 
 ```powershell
 Invoke-RestMethod -Method Post http://127.0.0.1:8000/providers/resolve-link `
@@ -55,8 +60,8 @@ Invoke-RestMethod -Method Post http://127.0.0.1:8000/providers/resolve-link `
   -Body '{"url":"https://y.qq.com/n/ryqq/songDetail/000QhABT1zNwjC"}'
 ```
 
-## Documentation
+## 文档
 
-The working implementation plan lives in `docs/RUN_IN_MUSIC_PROJECT_PLAN.md`. Add new decisions and future features there before implementing them.
+项目总规划在 `docs/RUN_IN_MUSIC_PROJECT_PLAN.md`。新增重要决策或未来功能前，先把内容追加到文档里。
 
-Use `docs/DEVELOPMENT_STATUS.md` as the ongoing development handoff: it tracks what is done, what is missing, and what to build next.
+持续开发交接文档是 `docs/DEVELOPMENT_STATUS.md`，用于记录已经完成什么、还缺什么、下一步优先做什么。

@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-- 当前版本：Alpha 0.2 三栏首页 + GPS 跑步记录 + 诊断日志导出 + AI 音乐管线 PoC
+- 当前版本：Alpha 0.2 闭环：GPS 跑步记录 + 服务器 AI 曲库 + 内置播放器
 - 当前日期：2026-05-18
 - 仓库地址：https://github.com/wmingxi816/Run-in-Music
 - 当前主线分支：`main`
@@ -77,6 +77,20 @@
   - 导出 zip 到 App cache，并通过 `FileProvider` 调起系统分享面板。
   - zip 包含 `diagnostics.json`、`events.jsonl`、`run_sessions.csv`、`song_interactions.csv`。
   - 导出时会脱敏 `key`、`token`、`cookie`、`password`、`secret` 等字段。
+- 已实现跑步记录闭环增强：
+  - 跑步状态增加 `Paused`，支持暂停 / 继续。
+  - 暂停时冻结计时并停止累计 GPS 距离，继续后不会把暂停期间的位置跳变算入距离。
+  - 前台 `RunTrackingService` 增加 pause / resume action。
+  - 跑步页显示最近 5 次跑步记录。
+- 已实现服务器曲库播放链路：
+  - Room `songs` 表新增 `streamUrl` 字段，数据库版本升级到 3。
+  - 后台曲库同步可解析 `platform_urls.generated`，并把相对路径合成为服务器完整 URL。
+  - 音乐页新增内置播放器状态卡。
+  - 有服务器音频 URL 的歌曲使用 Android `MediaPlayer` 串流播放；QQ / 网易云歌曲仍走外部链接跳转。
+- 已实现曲库同步体验增强：
+  - “我的”页显示本地可推荐歌曲数量。
+  - 手动同步后显示本次会话内的上次同步时间。
+  - 文案明确为从服务器曲库同步元数据，音频从服务器串流，不保存到手机。
 
 ### Python 后台
 
@@ -117,7 +131,9 @@
   - `generation_plan.py` 可生成 100 条确定性的 AI 跑步音乐生成任务。
   - `analyze_batch.py` 可批量分析生成音频元数据，并输出 BPM、置信度、候选 BPM、接受 / 拒绝状态。
   - `import_generated.py` 可把通过分析的 AI 曲目导入 `songs`、`platform_tracks`、`audio_analysis`。
-  - 生成曲目的平台标记为 `generated`，第一版链接格式为 `generated://<track_id>`。
+  - 生成曲目的平台标记为 `generated`，第一版播放链接格式为 `/audio/generated/<track_id>`。
+  - `generate_batch.py` 可生成可播放 WAV 占位音频，用于跑通目录、曲库、播放器闭环；真实 ACE-Step 适配仍是下一步。
+  - `/audio/generated/{track_id}` 可从 `backend/generated_music/` 安全读取并返回 WAV 文件。
   - 仓库根目录已新增 `pytest.ini`，可以直接从项目根目录运行后端 pytest。
 
 ### 测试与验证
@@ -133,6 +149,7 @@
   - GPS 距离累计
   - 平均配速计算
   - 跑步状态流转
+  - 跑步暂停 / 继续时长冻结
   - 诊断导出 payload 结构
   - 诊断 zip 文件写入
   - Room 记录到诊断模型映射
@@ -144,8 +161,10 @@
   - provider registry
   - 推荐过滤和排序
   - AI 音乐生成任务规划
+  - AI 占位 WAV 批量生成
   - AI 生成音频批量分析包装
   - AI 曲目导入数据库
+  - 生成音频路径安全校验
 - 已验证命令：
   - `.\gradlew.bat testDebugUnitTest`
   - `.\gradlew.bat assembleDebug`
@@ -162,11 +181,9 @@
 - 跑步记录保存已有首版实现，但还没有覆盖异常中断、服务被系统杀死后的恢复。
 - 诊断日志导出已有首版实现，但还没有在真机上验证系统分享面板和实际 zip 内容。
 - 诊断日志第一版只导出摘要，不导出原始 GPS 坐标轨迹。
-- 跑步页暂停按钮当前是 UI 占位，尚未实现真正暂停 / 恢复 GPS 服务状态。
-- 音乐页 AI 推荐卡片当前是占位数据，尚未接入服务端 AI 生成曲库。
-- 跑步历史页未实现。
+- 音乐页仍未接入真实 ACE-Step 生成曲库样例；当前后端生成器是可播放 WAV 占位实现。
 - 权限流已拆分运动识别和定位请求，但还需要补更细的拒绝后引导文案。
-- 后台曲库同步地址目前写死为模拟器地址，真机需要可配置局域网地址。
+- 后台曲库同步地址目前仍是默认模拟器地址；后续部署到服务器时应切换为固定服务器地址或构建配置，不做用户手动输入局域网地址。
 - 没有真机传感器/GPS 验收记录。
 
 ### Python 后台
@@ -177,7 +194,7 @@
 - `/analysis/jobs` 当前需要调用方提供 `audio_url`。
 - 后台没有管理界面或 CLI 导入工具。
 - 没有导入统计、重复歌曲合并策略、失败原因报表。
-- AI 音乐管线仍缺少真实生成器接入，`generate_batch.py` 未实现。
+- AI 音乐管线仍缺少真实 ACE-Step 生成器接入，`generate_batch.py` 当前是 WAV 占位生成器。
 - 尚未生成真实 AI 音频样例，也未把样例导入 Android 可同步曲库。
 
 ### 产品能力
@@ -351,3 +368,5 @@
 - 2026-05-18：AI 音乐 MVP 规划为服务端批量生成和分析，后端作为权威推荐源，Android 保留本地推荐作为离线 fallback。
 - 2026-05-18：AI 生成曲目第一版复用现有曲库表，不新增 `generated_tracks` 表；平台统一标记为 `generated`，音频链接先使用 `generated://<track_id>` 占位，等真实音频托管方式确定后再替换。
 - 2026-05-18：后端测试入口固定到仓库根目录 `pytest.ini`，避免后续从项目根运行 pytest 时找不到 `backend/app` 包。
+- 2026-05-18：音乐文件不存用户手机；服务端保存音频文件并通过 `/audio/generated/{track_id}` 提供串流，Android Room 只缓存歌曲元数据和播放 URL。
+- 2026-05-18：Android 内置播放器先用系统 `MediaPlayer`，避免引入额外播放依赖；后续如果需要播放队列、进度条、后台音频通知，再升级到 Media3。

@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         RunSessionEntity::class,
         AppEventEntity::class,
     ],
-    version = 2,
+    version = 3,
 )
 abstract class RunInMusicDatabase : RoomDatabase() {
     abstract fun songDao(): SongDao
@@ -30,6 +30,7 @@ abstract class RunInMusicDatabase : RoomDatabase() {
                     "run_in_music.db",
                 )
                     .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_2_3)
                     .build()
                     .also { instance = it }
             }
@@ -50,6 +51,12 @@ abstract class RunInMusicDatabase : RoomDatabase() {
                     )
                     """.trimIndent(),
                 )
+            }
+        }
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `songs` ADD COLUMN `streamUrl` TEXT")
             }
         }
     }

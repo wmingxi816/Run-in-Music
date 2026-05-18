@@ -20,6 +20,14 @@ object RunTrackingStore {
         controller.tick(nowMillis)
     }
 
+    fun pause(pausedAtMillis: Long = System.currentTimeMillis()) {
+        controller.pause(pausedAtMillis)
+    }
+
+    fun resume(resumedAtMillis: Long = System.currentTimeMillis()) {
+        controller.resume(resumedAtMillis)
+    }
+
     fun finish(endedAtMillis: Long = System.currentTimeMillis()): RunTrackingState {
         return controller.finish(endedAtMillis)
     }

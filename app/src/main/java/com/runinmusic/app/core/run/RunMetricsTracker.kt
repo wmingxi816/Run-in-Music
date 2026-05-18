@@ -12,6 +12,8 @@ class RunMetricsTracker(
     private var lastSample: RunLocationSample? = null
     private var latestTimeMillis: Long = startedAtMillis
     private var distanceMeters: Double = 0.0
+    private var pausedAtMillis: Long? = null
+    private var accumulatedPausedMillis: Long = 0L
 
     fun addSample(sample: RunLocationSample): RunMetricsSnapshot {
         lastSample?.let { previous ->
@@ -23,8 +25,8 @@ class RunMetricsTracker(
     }
 
     fun snapshotAt(timeMillis: Long): RunMetricsSnapshot {
-        val updatedAtMillis = maxOf(startedAtMillis, timeMillis)
-        val elapsedMillis = updatedAtMillis - startedAtMillis
+        val updatedAtMillis = maxOf(startedAtMillis, pausedAtMillis ?: timeMillis)
+        val elapsedMillis = updatedAtMillis - startedAtMillis - accumulatedPausedMillis
         val pace = if (distanceMeters > 0.0) {
             (elapsedMillis / 1_000.0) / (distanceMeters / 1_000.0)
         } else {
@@ -41,6 +43,26 @@ class RunMetricsTracker(
     }
 
     fun snapshot(): RunMetricsSnapshot = snapshotAt(latestTimeMillis)
+
+    fun pause(pausedAtMillis: Long): RunMetricsSnapshot {
+        val effectivePausedAt = maxOf(startedAtMillis, pausedAtMillis)
+        if (this.pausedAtMillis == null) {
+            this.pausedAtMillis = effectivePausedAt
+            latestTimeMillis = effectivePausedAt
+        }
+        return snapshotAt(effectivePausedAt)
+    }
+
+    fun resume(resumedAtMillis: Long): RunMetricsSnapshot {
+        val pausedAt = pausedAtMillis
+        if (pausedAt != null) {
+            accumulatedPausedMillis += (resumedAtMillis - pausedAt).coerceAtLeast(0L)
+            pausedAtMillis = null
+            latestTimeMillis = maxOf(startedAtMillis, resumedAtMillis)
+            lastSample = null
+        }
+        return snapshotAt(resumedAtMillis)
+    }
 
     companion object {
         private const val EARTH_RADIUS_METERS = 6_371_000.0

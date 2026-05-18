@@ -20,6 +20,7 @@ class MusicRepository(
 ) {
     val songs = database.songDao().observeSongs().map { rows -> rows.map { it.toCandidate() } }
     val latestRunSession = database.songDao().observeLatestRunSession()
+    val recentRunSessions = database.songDao().observeRecentRunSessions(limit = 5)
 
     suspend fun seedCatalogIfEmpty() {
         if (database.songDao().countSongs() > 0) return
@@ -157,6 +158,7 @@ class MusicRepository(
                         }.orEmpty(),
                         qqUrl = item.optString("qqUrl").takeIf { it.isNotBlank() },
                         neteaseUrl = item.optString("neteaseUrl").takeIf { it.isNotBlank() },
+                        streamUrl = item.optString("streamUrl").takeIf { it.isNotBlank() },
                     ),
                 )
             }
