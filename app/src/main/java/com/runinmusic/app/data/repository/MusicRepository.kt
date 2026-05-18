@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 
 class MusicRepository(
     private val context: Context,
@@ -43,6 +44,16 @@ class MusicRepository(
                 songId = songId,
                 action = type.name,
             ),
+        )
+        logEvent(
+            level = "info",
+            module = "music",
+            type = "song_interaction",
+            message = "Song interaction recorded",
+            detailsJson = JSONObject()
+                .put("songId", songId)
+                .put("action", type.name)
+                .toString(),
         )
     }
 

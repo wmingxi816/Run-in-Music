@@ -12,6 +12,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.runinmusic.app.data.local.RunInMusicDatabase
 import com.runinmusic.app.data.repository.MusicRepository
+import com.runinmusic.app.diagnostics.DiagnosticExportService
+import com.runinmusic.app.diagnostics.DiagnosticShareLauncher
 import com.runinmusic.app.feature.home.HomeScreen
 import com.runinmusic.app.feature.home.HomeViewModel
 import com.runinmusic.app.location.RunTrackingService
@@ -25,11 +27,12 @@ class MainActivity : ComponentActivity() {
         val database = RunInMusicDatabase.get(applicationContext)
         val repository = MusicRepository(applicationContext, database)
         val cadenceMeasurer = CadenceMeasurer(applicationContext)
+        val diagnosticExportService = DiagnosticExportService(applicationContext, repository)
 
         setContent {
             RunInMusicTheme {
                 val viewModel: HomeViewModel = viewModel(
-                    factory = HomeViewModel.factory(repository, cadenceMeasurer),
+                    factory = HomeViewModel.factory(repository, cadenceMeasurer, diagnosticExportService),
                 )
                 val activityPermissions = remember {
                     buildList {
@@ -87,6 +90,11 @@ class MainActivity : ComponentActivity() {
                     onStopRun = {
                         viewModel.showRunTrackingMessage("正在结束并保存本次跑步。")
                         startService(RunTrackingService.stopIntent(applicationContext))
+                    },
+                    onExportDiagnostics = {
+                        viewModel.exportDiagnostics { file ->
+                            DiagnosticShareLauncher.share(this, file)
+                        }
                     },
                     onOpenSong = { song ->
                         viewModel.recordOpened(song.id)

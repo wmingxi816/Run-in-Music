@@ -20,6 +20,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.runinmusic.app.R
 import com.runinmusic.app.core.run.RunLocationSample
+import com.runinmusic.app.data.local.AppEventEntity
 import com.runinmusic.app.data.local.RunInMusicDatabase
 import com.runinmusic.app.data.local.RunSessionEntity
 import kotlinx.coroutines.CoroutineScope
@@ -27,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class RunTrackingService : Service() {
     private lateinit var client: FusedLocationProviderClient
@@ -62,6 +64,11 @@ class RunTrackingService : Service() {
         startForeground(NOTIFICATION_ID, notification())
         if (!RunTrackingStore.state.value.isRunning) {
             RunTrackingStore.start()
+            logEvent(
+                type = "run_started",
+                message = "Run tracking started",
+                detailsJson = null,
+            )
         }
         requestLocationUpdatesIfAllowed()
         return START_NOT_STICKY
@@ -98,7 +105,8 @@ class RunTrackingService : Service() {
         }
 
         serviceScope.launch {
-            RunInMusicDatabase.get(applicationContext).songDao().insertRunSession(
+            val dao = RunInMusicDatabase.get(applicationContext).songDao()
+            dao.insertRunSession(
                 RunSessionEntity(
                     startedAtMillis = startedAtMillis,
                     endedAtMillis = endedAtMillis,
@@ -108,7 +116,38 @@ class RunTrackingService : Service() {
                     targetBpm = null,
                 ),
             )
+            dao.insertAppEvent(
+                AppEventEntity(
+                    level = "info",
+                    module = "run",
+                    type = "run_finished",
+                    message = "Run tracking finished",
+                    detailsJson = JSONObject()
+                        .put("elapsedMillis", finished.elapsedMillis)
+                        .put("distanceMeters", finished.distanceMeters)
+                        .put("averagePaceSecondsPerKm", finished.averagePaceSecondsPerKm)
+                        .toString(),
+                ),
+            )
             mainHandler.post { finishService() }
+        }
+    }
+
+    private fun logEvent(
+        type: String,
+        message: String,
+        detailsJson: String?,
+    ) {
+        serviceScope.launch {
+            RunInMusicDatabase.get(applicationContext).songDao().insertAppEvent(
+                AppEventEntity(
+                    level = "info",
+                    module = "run",
+                    type = type,
+                    message = message,
+                    detailsJson = detailsJson,
+                ),
+            )
         }
     }
 

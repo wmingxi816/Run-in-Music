@@ -10,6 +10,7 @@ import com.runinmusic.app.core.model.SongInteractionType
 import com.runinmusic.app.core.recommendation.RecommendationEngine
 import com.runinmusic.app.data.local.RunSessionEntity
 import com.runinmusic.app.data.repository.MusicRepository
+import com.runinmusic.app.diagnostics.DiagnosticExportService
 import com.runinmusic.app.location.RunTrackingState
 import com.runinmusic.app.location.RunTrackingStatus
 import com.runinmusic.app.location.RunTrackingStore
@@ -22,10 +23,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.io.File
 
 class HomeViewModel(
     private val repository: MusicRepository,
     private val cadenceMeasurer: CadenceMeasurer,
+    private val diagnosticExportService: DiagnosticExportService,
     private val recommendationEngine: RecommendationEngine = RecommendationEngine(),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -121,6 +125,36 @@ class HomeViewModel(
         _uiState.update { it.copy(runStatusMessage = message) }
     }
 
+    fun exportDiagnostics(onExported: (File) -> Unit) {
+        if (_uiState.value.isExportingDiagnostics) return
+        _uiState.update {
+            it.copy(
+                isExportingDiagnostics = true,
+                diagnosticStatusMessage = "正在整理跑步、推荐和错误日志...",
+            )
+        }
+        viewModelScope.launch {
+            runCatching { diagnosticExportService.export() }
+                .onSuccess { file ->
+                    _uiState.update {
+                        it.copy(
+                            isExportingDiagnostics = false,
+                            diagnosticStatusMessage = "日志已生成：${file.name}",
+                        )
+                    }
+                    onExported(file)
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isExportingDiagnostics = false,
+                            diagnosticStatusMessage = "导出失败：${error.message ?: "未知错误"}",
+                        )
+                    }
+                }
+        }
+    }
+
     fun refreshBackendCatalog() {
         if (_uiState.value.isRefreshingCatalog) return
         _uiState.update {
@@ -132,6 +166,17 @@ class HomeViewModel(
         viewModelScope.launch {
             runCatching { repository.refreshCatalogFromBackend() }
                 .onSuccess { result ->
+                    repository.logEvent(
+                        level = "info",
+                        module = "catalog",
+                        type = "sync_success",
+                        message = "Catalog refreshed from backend",
+                        detailsJson = JSONObject()
+                            .put("importedCount", result.importedCount)
+                            .put("skippedWithoutBpm", result.skippedWithoutBpm)
+                            .put("sourceUrl", result.sourceUrl)
+                            .toString(),
+                    )
                     _uiState.update {
                         it.copy(
                             isRefreshingCatalog = false,
@@ -141,6 +186,13 @@ class HomeViewModel(
                     recomputeRecommendations()
                 }
                 .onFailure { error ->
+                    repository.logEvent(
+                        level = "error",
+                        module = "catalog",
+                        type = "sync_failed",
+                        message = error.message ?: "Catalog refresh failed",
+                        detailsJson = null,
+                    )
                     _uiState.update {
                         it.copy(
                             isRefreshingCatalog = false,
@@ -210,6 +262,21 @@ class HomeViewModel(
                 },
             )
         }
+        viewModelScope.launch {
+            repository.logEvent(
+                level = "info",
+                module = "cadence",
+                type = "measurement_finished",
+                message = "Cadence measurement finished",
+                detailsJson = JSONObject()
+                    .put("steps", result.steps)
+                    .put("seconds", result.seconds)
+                    .put("spm", result.spm)
+                    .put("targetBpm", targetBpm)
+                    .put("source", result.source.name)
+                    .toString(),
+            )
+        }
         recomputeRecommendations()
     }
 
@@ -239,10 +306,11 @@ class HomeViewModel(
         fun factory(
             repository: MusicRepository,
             cadenceMeasurer: CadenceMeasurer,
+            diagnosticExportService: DiagnosticExportService,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return HomeViewModel(repository, cadenceMeasurer) as T
+                return HomeViewModel(repository, cadenceMeasurer, diagnosticExportService) as T
             }
         }
     }
@@ -261,6 +329,8 @@ data class HomeUiState(
     val runTrackingState: RunTrackingState = RunTrackingState(),
     val latestRunSession: RunSessionEntity? = null,
     val runStatusMessage: String = "开始跑步后会记录 GPS 距离、时长和平均配速。",
+    val isExportingDiagnostics: Boolean = false,
+    val diagnosticStatusMessage: String = "导出一个 zip，里面包含跑步摘要、歌曲行为、权限状态和错误日志。",
     val catalogStatusMessage: String = "后台曲库同步可把爬取结果导入本机推荐。",
     val statusMessage: String = "点击测量步频，让音乐贴住你的脚步。",
 )

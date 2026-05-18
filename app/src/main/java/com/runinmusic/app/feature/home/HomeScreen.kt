@@ -53,6 +53,7 @@ fun HomeScreen(
     onStartMeasurement: () -> Unit,
     onStartRun: () -> Unit,
     onStopRun: () -> Unit,
+    onExportDiagnostics: () -> Unit,
     onOpenSong: (SongCandidate) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -90,6 +91,12 @@ fun HomeScreen(
                 )
             }
             item {
+                DiagnosticExportCard(
+                    state = state,
+                    onExportDiagnostics = onExportDiagnostics,
+                )
+            }
+            item {
                 CatalogSyncCard(
                     state = state,
                     onRefreshCatalog = viewModel::refreshBackendCatalog,
@@ -114,6 +121,47 @@ fun HomeScreen(
                         onDislike = { viewModel.markDisliked(recommendation.song.id) },
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiagnosticExportCard(
+    state: HomeUiState,
+    onExportDiagnostics: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF101E1A)),
+        shape = RoundedCornerShape(28.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "诊断日志",
+                    color = Color(0xFFFFD36E),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    text = state.diagnosticStatusMessage,
+                    color = Color(0xFFCFE8D2),
+                    fontSize = 13.sp,
+                )
+            }
+            Button(
+                enabled = !state.isExportingDiagnostics,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD36E), contentColor = Color(0xFF101E1A)),
+                shape = RoundedCornerShape(14.dp),
+                onClick = onExportDiagnostics,
+            ) {
+                Text(if (state.isExportingDiagnostics) "整理中" else "导出日志")
             }
         }
     }
