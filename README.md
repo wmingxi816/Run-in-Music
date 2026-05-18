@@ -50,3 +50,5 @@ Invoke-RestMethod -Method Post http://127.0.0.1:8000/providers/resolve-link `
 ## Documentation
 
 The working implementation plan lives in `docs/RUN_IN_MUSIC_PROJECT_PLAN.md`. Add new decisions and future features there before implementing them.
+
+Use `docs/DEVELOPMENT_STATUS.md` as the ongoing development handoff: it tracks what is done, what is missing, and what to build next.
