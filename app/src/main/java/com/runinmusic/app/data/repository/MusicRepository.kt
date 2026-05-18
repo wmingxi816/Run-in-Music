@@ -2,6 +2,7 @@ package com.runinmusic.app.data.repository
 
 import android.content.Context
 import com.runinmusic.app.core.model.SongInteractionType
+import com.runinmusic.app.data.local.AppEventEntity
 import com.runinmusic.app.data.local.RunInMusicDatabase
 import com.runinmusic.app.data.local.RunSessionEntity
 import com.runinmusic.app.data.local.SongEntity
@@ -41,6 +42,24 @@ class MusicRepository(
             SongInteractionEntity(
                 songId = songId,
                 action = type.name,
+            ),
+        )
+    }
+
+    suspend fun logEvent(
+        level: String,
+        module: String,
+        type: String,
+        message: String,
+        detailsJson: String? = null,
+    ) {
+        database.songDao().insertAppEvent(
+            AppEventEntity(
+                level = level,
+                module = module,
+                type = type,
+                message = message,
+                detailsJson = detailsJson,
             ),
         )
     }
@@ -91,6 +110,18 @@ class MusicRepository(
                 targetBpm = targetBpm,
             ),
         )
+    }
+
+    suspend fun recentRunSessions(limit: Int): List<RunSessionEntity> {
+        return database.songDao().getRecentRunSessions(limit)
+    }
+
+    suspend fun recentAppEvents(limit: Int): List<AppEventEntity> {
+        return database.songDao().getRecentAppEvents(limit)
+    }
+
+    suspend fun songInteractions(): List<SongInteractionEntity> {
+        return database.songDao().getInteractions()
     }
 
     private fun readSeedCatalog(): List<SongEntity> {

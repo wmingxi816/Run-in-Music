@@ -31,4 +31,13 @@ interface SongDao {
 
     @Query("SELECT * FROM run_sessions ORDER BY startedAtMillis DESC LIMIT 1")
     fun observeLatestRunSession(): Flow<RunSessionEntity?>
+
+    @Query("SELECT * FROM run_sessions ORDER BY startedAtMillis DESC LIMIT :limit")
+    suspend fun getRecentRunSessions(limit: Int): List<RunSessionEntity>
+
+    @Insert
+    suspend fun insertAppEvent(event: AppEventEntity): Long
+
+    @Query("SELECT * FROM app_events ORDER BY createdAtMillis DESC LIMIT :limit")
+    suspend fun getRecentAppEvents(limit: Int): List<AppEventEntity>
 }
