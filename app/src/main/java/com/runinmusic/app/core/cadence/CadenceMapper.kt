@@ -5,6 +5,7 @@ import kotlin.math.abs
 object CadenceMapper {
     const val DEFAULT_MEASUREMENT_SECONDS = 10
     const val DEFAULT_TOLERANCE_BPM = 10.0
+    val SUPPORTED_MEASUREMENT_SECONDS = listOf(10, 20, 30, 60)
 
     fun stepsToSpm(steps: Int, seconds: Int = DEFAULT_MEASUREMENT_SECONDS): Double {
         require(seconds > 0) { "seconds must be positive" }

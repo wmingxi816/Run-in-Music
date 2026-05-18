@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,12 +28,18 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -41,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.runinmusic.app.core.cadence.CadenceMapper
 import com.runinmusic.app.core.model.RecommendedSong
 import com.runinmusic.app.core.model.SongCandidate
 import com.runinmusic.app.data.local.RunSessionEntity
@@ -57,70 +66,187 @@ fun HomeScreen(
     onOpenSong: (SongCandidate) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
+    var selectedTab by remember { mutableStateOf(HomeTab.Run) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFFF6F1E6), Color(0xFFE7F2D8), Color(0xFF07110F)),
-                ),
-            ),
-    ) {
-        RhythmBackdrop()
-        LazyColumn(
+    Scaffold(
+        contentWindowInsets = WindowInsets.navigationBars,
+        bottomBar = {
+            NavigationBar(containerColor = Color(0xFF0C1714), tonalElevation = 12.dp) {
+                HomeTab.entries.forEach { tab ->
+                    NavigationBarItem(
+                        selected = selectedTab == tab,
+                        onClick = { selectedTab = tab },
+                        icon = { Text(tab.icon, fontSize = 20.sp) },
+                        label = { Text(tab.label) },
+                    )
+                }
+            }
+        },
+    ) { innerPadding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            item {
-                HeroCard(
-                    state = state,
-                    onStartMeasurement = onStartMeasurement,
-                    onManualTap = viewModel::recordManualTap,
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFFF6F1E6), Color(0xFFE7F2D8), Color(0xFF07110F)),
+                    ),
                 )
-            }
-            item {
-                RunTrackingCard(
-                    runState = state.runTrackingState,
-                    latestRunSession = state.latestRunSession,
-                    message = state.runStatusMessage,
+                .padding(innerPadding),
+        ) {
+            RhythmBackdrop()
+            when (selectedTab) {
+                HomeTab.Run -> RunPage(
+                    state = state,
                     onStartRun = onStartRun,
                     onStopRun = onStopRun,
                 )
-            }
-            item {
-                DiagnosticExportCard(
+                HomeTab.Music -> MusicPage(
+                    state = state,
+                    onStartMeasurement = onStartMeasurement,
+                    onManualTap = viewModel::recordManualTap,
+                    onSelectMeasurementSeconds = viewModel::selectMeasurementSeconds,
+                    onExpandMeasurementPanel = viewModel::expandMeasurementPanel,
+                    onOpenSong = onOpenSong,
+                    onLike = viewModel::markLiked,
+                    onDislike = viewModel::markDisliked,
+                )
+                HomeTab.Profile -> ProfilePage(
                     state = state,
                     onExportDiagnostics = onExportDiagnostics,
-                )
-            }
-            item {
-                CatalogSyncCard(
-                    state = state,
                     onRefreshCatalog = viewModel::refreshBackendCatalog,
                 )
             }
-            item {
-                Text(
-                    text = "今日节奏推荐",
-                    color = Color(0xFFFDF8EC),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Black,
+        }
+    }
+}
+
+private enum class HomeTab(val label: String, val icon: String) {
+    Run("跑步", "跑"),
+    Music("音乐", "乐"),
+    Profile("我的", "我"),
+}
+
+@Composable
+private fun RunPage(
+    state: HomeUiState,
+    onStartRun: () -> Unit,
+    onStopRun: () -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item { RunHeroCard(state.runTrackingState) }
+        item {
+            RunTrackingCard(
+                runState = state.runTrackingState,
+                latestRunSession = state.latestRunSession,
+                message = state.runStatusMessage,
+                onStartRun = onStartRun,
+                onStopRun = onStopRun,
+            )
+        }
+        item { RunPlanSection() }
+        item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun MusicPage(
+    state: HomeUiState,
+    onStartMeasurement: () -> Unit,
+    onManualTap: () -> Unit,
+    onSelectMeasurementSeconds: (Int) -> Unit,
+    onExpandMeasurementPanel: () -> Unit,
+    onOpenSong: (SongCandidate) -> Unit,
+    onLike: (String) -> Unit,
+    onDislike: (String) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            MeasurementCard(
+                state = state,
+                onStartMeasurement = onStartMeasurement,
+                onManualTap = onManualTap,
+                onSelectMeasurementSeconds = onSelectMeasurementSeconds,
+                onExpandMeasurementPanel = onExpandMeasurementPanel,
+            )
+        }
+        item {
+            Text(
+                text = "节奏音乐推荐",
+                color = Color(0xFFFDF8EC),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Black,
+            )
+        }
+        if (state.recommendations.isEmpty()) {
+            items(DemoMusicRecommendations, key = { it.title }) { recommendation ->
+                DemoSongCard(recommendation)
+            }
+        } else {
+            items(state.recommendations, key = { it.song.id }) { recommendation ->
+                SongCard(
+                    recommendation = recommendation,
+                    onOpen = { onOpenSong(recommendation.song) },
+                    onLike = { onLike(recommendation.song.id) },
+                    onDislike = { onDislike(recommendation.song.id) },
                 )
             }
-            if (state.recommendations.isEmpty()) {
-                item { EmptyRecommendationCard() }
-            } else {
-                items(state.recommendations, key = { it.song.id }) { recommendation ->
-                    SongCard(
-                        recommendation = recommendation,
-                        onOpen = { onOpenSong(recommendation.song) },
-                        onLike = { viewModel.markLiked(recommendation.song.id) },
-                        onDislike = { viewModel.markDisliked(recommendation.song.id) },
-                    )
-                }
+        }
+        item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun ProfilePage(
+    state: HomeUiState,
+    onExportDiagnostics: () -> Unit,
+    onRefreshCatalog: () -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item { ProfileSummaryCard(state) }
+        item { DiagnosticExportCard(state = state, onExportDiagnostics = onExportDiagnostics) }
+        item { CatalogSyncCard(state = state, onRefreshCatalog = onRefreshCatalog) }
+        item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun RunHeroCard(runState: RunTrackingState) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF101E1A)),
+        shape = RoundedCornerShape(32.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            Text(text = "Run in Music", color = Color(0xFFFF7A1A), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = if (runState.isRunning) "保持节奏，继续推进" else "今天，从一段轻跑开始",
+                color = Color(0xFFFDF8EC),
+                fontSize = 34.sp,
+                lineHeight = 38.sp,
+                fontWeight = FontWeight.Black,
+            )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                MetricPill(label = "时长", value = formatElapsed(runState.elapsedMillis))
+                MetricPill(label = "距离", value = formatDistance(runState.distanceMeters))
+                MetricPill(label = "配速", value = formatPace(runState.averagePaceSecondsPerKm))
             }
         }
     }
@@ -222,6 +348,24 @@ private fun RunTrackingCard(
                 RunMetricTile(label = "配速", value = formatPace(runState.averagePaceSecondsPerKm), modifier = Modifier.weight(1f))
             }
 
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(
+                    enabled = runState.isRunning,
+                    shape = RoundedCornerShape(14.dp),
+                    onClick = {},
+                ) {
+                    Text("暂停")
+                }
+                Surface(color = Color(0xFFE7F2D8), shape = CircleShape) {
+                    Text(
+                        text = "暂停功能下一步接入",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        color = Color(0xFF2D483E),
+                        fontSize = 12.sp,
+                    )
+                }
+            }
+
             latestRunSession?.let { session ->
                 Surface(color = Color(0xFFE7F2D8), shape = RoundedCornerShape(18.dp)) {
                     Text(
@@ -230,6 +374,32 @@ private fun RunTrackingCard(
                         color = Color(0xFF2D483E),
                         fontSize = 13.sp,
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RunPlanSection() {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(text = "推荐跑步计划", color = Color(0xFFFDF8EC), fontSize = 24.sp, fontWeight = FontWeight.Black)
+        DemoRunPlans.forEach { plan ->
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFDF8EC)), shape = RoundedCornerShape(24.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                        Text(text = plan.title, color = Color(0xFF101E1A), fontSize = 20.sp, fontWeight = FontWeight.Black)
+                        Text(text = plan.description, color = Color(0xFF557165), fontSize = 13.sp)
+                    }
+                    Surface(color = Color(0xFFE7F2D8), shape = CircleShape) {
+                        Text(text = plan.badge, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color(0xFF2D483E), fontSize = 12.sp)
+                    }
                 }
             }
         }
@@ -298,10 +468,12 @@ private fun CatalogSyncCard(
 }
 
 @Composable
-private fun HeroCard(
+private fun MeasurementCard(
     state: HomeUiState,
     onStartMeasurement: () -> Unit,
     onManualTap: () -> Unit,
+    onSelectMeasurementSeconds: (Int) -> Unit,
+    onExpandMeasurementPanel: () -> Unit,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF101E1A)),
@@ -312,19 +484,8 @@ private fun HeroCard(
             modifier = Modifier.padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            Text(
-                text = "Run in Music",
-                color = Color(0xFFFF7A1A),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = "让下一首歌跟上你的步频",
-                color = Color(0xFFFDF8EC),
-                fontSize = 34.sp,
-                lineHeight = 38.sp,
-                fontWeight = FontWeight.Black,
-            )
+            Text(text = "步频测量", color = Color(0xFFFF7A1A), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(text = "让下一首歌跟上你的脚步", color = Color(0xFFFDF8EC), fontSize = 30.sp, lineHeight = 34.sp, fontWeight = FontWeight.Black)
             Text(
                 text = state.statusMessage,
                 color = Color(0xFFCFE8D2),
@@ -340,13 +501,28 @@ private fun HeroCard(
                 MetricPill(label = "步数", value = state.lastSteps?.toString() ?: state.manualTapCount.toString())
             }
 
-            AnimatedVisibility(visible = state.isMeasuring) {
-                Text(
-                    text = "剩余 ${state.secondsRemaining}s",
-                    color = Color(0xFFFFD36E),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                )
+            AnimatedVisibility(visible = state.isMeasurementPanelExpanded || state.isMeasuring) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CadenceMapper.SUPPORTED_MEASUREMENT_SECONDS.forEach { seconds ->
+                            val selected = state.selectedMeasurementSeconds == seconds
+                            OutlinedButton(
+                                enabled = !state.isMeasuring,
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (selected) Color(0xFFFFD36E) else Color.Transparent,
+                                    contentColor = if (selected) Color(0xFF101E1A) else Color(0xFFFFD36E),
+                                ),
+                                onClick = { onSelectMeasurementSeconds(seconds) },
+                            ) {
+                                Text("${seconds}s")
+                            }
+                        }
+                    }
+                    if (state.isMeasuring) {
+                        Text(text = "剩余 ${state.secondsRemaining}s", color = Color(0xFFFFD36E), fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    }
+                }
             }
 
             if (state.manualMode && state.isMeasuring) {
@@ -368,10 +544,55 @@ private fun HeroCard(
                     enabled = !state.isMeasuring,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7A1A), contentColor = Color(0xFF101E1A)),
                     shape = RoundedCornerShape(18.dp),
-                    onClick = onStartMeasurement,
+                    onClick = if (state.isMeasurementPanelExpanded) onStartMeasurement else onExpandMeasurementPanel,
                 ) {
-                    Text(if (state.isMeasuring) "测量中" else "测量 10 秒步频", fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        when {
+                            state.isMeasuring -> "测量中"
+                            state.isMeasurementPanelExpanded -> "测量 ${state.selectedMeasurementSeconds} 秒步频"
+                            else -> "再次测量"
+                        },
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                    )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DemoSongCard(recommendation: DemoMusicRecommendation) {
+    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFDF8EC)), shape = RoundedCornerShape(26.dp)) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = recommendation.title, color = Color(0xFF101E1A), fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    Text(text = recommendation.subtitle, color = Color(0xFF557165), fontSize = 14.sp)
+                }
+                Text(text = "${recommendation.bpm} BPM", color = Color(0xFFFF7A1A), fontWeight = FontWeight.Black)
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                recommendation.tags.forEach { tag ->
+                    Surface(color = Color(0xFFE7F2D8), shape = CircleShape) {
+                        Text(text = tag, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = Color(0xFF2D483E), fontSize = 12.sp)
+                    }
+                }
+            }
+            Text(text = recommendation.reason, color = Color(0xFF2D483E), fontSize = 14.sp)
+        }
+    }
+}
+
+@Composable
+private fun ProfileSummaryCard(state: HomeUiState) {
+    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFDF8EC)), shape = RoundedCornerShape(28.dp)) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(text = "我的节奏档案", color = Color(0xFF101E1A), fontSize = 24.sp, fontWeight = FontWeight.Black)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                RunMetricTile(label = "最近 SPM", value = state.measuredSpm?.roundToInt()?.toString() ?: "--", modifier = Modifier.weight(1f))
+                RunMetricTile(label = "目标 BPM", value = state.targetBpm?.roundToInt()?.toString() ?: "--", modifier = Modifier.weight(1f))
+                RunMetricTile(label = "上次距离", value = state.latestRunSession?.distanceMeters?.let(::formatDistance) ?: "--", modifier = Modifier.weight(1f))
             }
         }
     }
@@ -467,7 +688,7 @@ private fun EmptyRecommendationCard() {
     ) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(text = "还没有推荐", fontSize = 22.sp, color = Color(0xFF101E1A), fontWeight = FontWeight.Black)
-            Text(text = "完成一次 10 秒步频测量后，这里会出现匹配当前节奏的歌曲。", color = Color(0xFF557165))
+            Text(text = "完成一次步频测量后，这里会出现匹配当前节奏的歌曲。", color = Color(0xFF557165))
         }
     }
 }
@@ -498,3 +719,31 @@ private fun formatPace(secondsPerKm: Double?): String {
     val totalSeconds = secondsPerKm.roundToInt()
     return "%d'%02d\"".format(totalSeconds / 60, totalSeconds % 60)
 }
+
+private data class DemoRunPlan(
+    val title: String,
+    val description: String,
+    val badge: String,
+)
+
+private val DemoRunPlans = listOf(
+    DemoRunPlan("20 分钟轻松跑", "低压力热身，适合今天只想动起来。", "新手"),
+    DemoRunPlan("3 × 4 分钟节奏跑", "中等强度间歇，后续可接入自动换歌。", "节奏"),
+    DemoRunPlan("30 分钟燃脂巡航", "稳定配速，推荐 80-95 BPM 音乐区间。", "耐力"),
+)
+
+private data class DemoMusicRecommendation(
+    val title: String,
+    val subtitle: String,
+    val bpm: Int,
+    val tags: List<String>,
+    val reason: String,
+)
+
+private val DemoMusicRecommendations = listOf(
+    DemoMusicRecommendation("Neon Stride 01", "AI Seed / Electronic Run", 82, listOf("电子", "高能", "稳定鼓点"), "适合 75-90 SPM 的轻松跑节奏。"),
+    DemoMusicRecommendation("Asphalt Pulse", "AI Seed / Indie Dance", 88, listOf("律动", "城市感", "中等激情"), "鼓组清晰，适合作为热身后的第一首。"),
+    DemoMusicRecommendation("Long Breath Loop", "AI Seed / Ambient Pop", 72, listOf("舒缓", "长跑", "低疲劳"), "适合恢复跑或慢跑阶段保持呼吸。"),
+    DemoMusicRecommendation("Copper Sprint", "AI Seed / Rock Hybrid", 104, listOf("摇滚", "冲刺", "强节拍"), "可用于间歇跑快段的占位曲目。"),
+    DemoMusicRecommendation("Night Track Marker", "AI Seed / Synthwave", 96, listOf("复古合成器", "夜跑", "推进感"), "节奏稳定，适合持续跑中段。"),
+)

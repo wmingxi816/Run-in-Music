@@ -80,25 +80,25 @@ class HomeViewModel(
             return
         }
 
-        resetMeasurementState(manualMode = false, message = "开始 10 秒步频测量，保持自然跑姿。")
+        val measurementSeconds = _uiState.value.selectedMeasurementSeconds
+        resetMeasurementState(manualMode = false, message = "开始 ${measurementSeconds} 秒步频测量，保持自然跑姿。")
         startCountdown()
-        val started = cadenceMeasurer.startTenSecondMeasurement { result ->
-            finishMeasurement(result)
-        }
+        val started = cadenceMeasurer.startMeasurement(seconds = measurementSeconds, onResult = ::finishMeasurement)
         if (!started) {
             startManualMeasurement("计步传感器暂时不可用，改用手动点拍。")
         }
     }
 
-    fun startManualMeasurement(message: String = "手动模式：每落一步点一次按钮，持续 10 秒。") {
+    fun startManualMeasurement(message: String = "手动模式：每落一步点一次按钮，持续所选时长。") {
         resetMeasurementState(manualMode = true, message = message)
         startCountdown {
             val steps = _uiState.value.manualTapCount
+            val measurementSeconds = _uiState.value.selectedMeasurementSeconds
             finishMeasurement(
                 CadenceResult(
                     steps = steps,
-                    seconds = CadenceMapper.DEFAULT_MEASUREMENT_SECONDS,
-                    spm = CadenceMapper.stepsToSpm(steps),
+                    seconds = measurementSeconds,
+                    spm = CadenceMapper.stepsToSpm(steps, measurementSeconds),
                     source = CadenceSource.ManualTap,
                 ),
             )
@@ -120,6 +120,15 @@ class HomeViewModel(
     fun markDisliked(songId: String) = recordInteraction(songId, SongInteractionType.Disliked)
 
     fun recordOpened(songId: String) = recordInteraction(songId, SongInteractionType.Opened)
+
+    fun selectMeasurementSeconds(seconds: Int) {
+        if (seconds !in CadenceMapper.SUPPORTED_MEASUREMENT_SECONDS || _uiState.value.isMeasuring) return
+        _uiState.update { it.copy(selectedMeasurementSeconds = seconds) }
+    }
+
+    fun expandMeasurementPanel() {
+        _uiState.update { it.copy(isMeasurementPanelExpanded = true) }
+    }
 
     fun showRunTrackingMessage(message: String) {
         _uiState.update { it.copy(runStatusMessage = message) }
@@ -218,7 +227,7 @@ class HomeViewModel(
                 isMeasuring = true,
                 manualMode = manualMode,
                 manualTapCount = 0,
-                secondsRemaining = CadenceMapper.DEFAULT_MEASUREMENT_SECONDS,
+                secondsRemaining = it.selectedMeasurementSeconds,
                 statusMessage = message,
             )
         }
@@ -227,7 +236,7 @@ class HomeViewModel(
     private fun startCountdown(onFinished: (() -> Unit)? = null) {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
-            for (remaining in CadenceMapper.DEFAULT_MEASUREMENT_SECONDS downTo 1) {
+            for (remaining in _uiState.value.selectedMeasurementSeconds downTo 1) {
                 _uiState.update { it.copy(secondsRemaining = remaining) }
                 delay(1_000L)
             }
@@ -255,6 +264,7 @@ class HomeViewModel(
                 lastSteps = result.steps,
                 measuredSpm = result.spm,
                 targetBpm = targetBpm,
+                isMeasurementPanelExpanded = false,
                 statusMessage = if (result.source == CadenceSource.StepDetector) {
                     "测量完成：已按当前步频匹配歌曲。"
                 } else {
@@ -319,6 +329,8 @@ class HomeViewModel(
 data class HomeUiState(
     val isMeasuring: Boolean = false,
     val manualMode: Boolean = false,
+    val isMeasurementPanelExpanded: Boolean = true,
+    val selectedMeasurementSeconds: Int = CadenceMapper.DEFAULT_MEASUREMENT_SECONDS,
     val isRefreshingCatalog: Boolean = false,
     val secondsRemaining: Int = CadenceMapper.DEFAULT_MEASUREMENT_SECONDS,
     val manualTapCount: Int = 0,

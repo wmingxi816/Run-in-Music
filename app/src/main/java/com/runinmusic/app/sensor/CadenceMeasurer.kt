@@ -20,7 +20,11 @@ class CadenceMeasurer(context: Context) : SensorEventListener {
 
     val isSupported: Boolean = stepDetector != null
 
-    fun startTenSecondMeasurement(onResult: (CadenceResult) -> Unit): Boolean {
+    fun startMeasurement(
+        seconds: Int = CadenceMapper.DEFAULT_MEASUREMENT_SECONDS,
+        onResult: (CadenceResult) -> Unit,
+    ): Boolean {
+        require(seconds in CadenceMapper.SUPPORTED_MEASUREMENT_SECONDS) { "unsupported measurement duration" }
         val sensor = stepDetector ?: return false
         stop()
         stepCount = 0
@@ -34,12 +38,12 @@ class CadenceMeasurer(context: Context) : SensorEventListener {
             onResult(
                 CadenceResult(
                     steps = steps,
-                    seconds = CadenceMapper.DEFAULT_MEASUREMENT_SECONDS,
-                    spm = CadenceMapper.stepsToSpm(steps),
+                    seconds = seconds,
+                    spm = CadenceMapper.stepsToSpm(steps, seconds),
                     source = CadenceSource.StepDetector,
                 ),
             )
-        }.also { handler.postDelayed(it, CadenceMapper.DEFAULT_MEASUREMENT_SECONDS * 1000L) }
+        }.also { handler.postDelayed(it, seconds * 1000L) }
         return true
     }
 

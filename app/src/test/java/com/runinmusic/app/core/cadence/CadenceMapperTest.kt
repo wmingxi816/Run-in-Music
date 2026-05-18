@@ -11,6 +11,11 @@ class CadenceMapperTest {
     }
 
     @Test
+    fun supportedMeasurementDurationsAreRunnerFriendly() {
+        assertEquals(listOf(10, 20, 30, 60), CadenceMapper.SUPPORTED_MEASUREMENT_SECONDS)
+    }
+
+    @Test
     fun highSpmMapsToHalfBpm() {
         assertEquals(80.0, CadenceMapper.targetBpmForSpm(160.0), 0.001)
     }
