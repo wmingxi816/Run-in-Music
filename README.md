@@ -52,6 +52,8 @@ backend\.venv\Scripts\python.exe -m pytest
 
 AI 音乐 PoC 模块位于 `backend/app/ai_music/`。当前切片可以规划 100 首 AI 跑步音乐生成任务、生成可播放 WAV 占位音频、包装 BPM 分析结果，并把通过分析的 AI 曲目导入现有曲库表。音乐文件放在 `backend/generated_music/`，通过 `/audio/generated/{track_id}` 提供给 App 串流播放。下一步是把占位生成器替换为真实本地音乐生成器。
 
+MusicGen-small 过夜批量生成流程见 `docs/MUSICGEN_OVERNIGHT_RUNBOOK.md`。脚本已支持独立依赖环境、dry-run、断点续跑、生成日志和生成后分析导入。
+
 本地调用示例：
 
 ```powershell

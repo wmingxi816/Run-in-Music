@@ -85,13 +85,15 @@ Android 端保持：
 - 已新增 `backend/app/ai_music/import_generated.py`，可以把通过分析的 AI 曲目写入现有 `songs`、`platform_tracks`、`audio_analysis` 表，其中平台标记为 `generated`，链接格式为 `/audio/generated/<track_id>`。
 - 已新增 `/audio/generated/{track_id}`，从 `backend/generated_music/` 返回服务端音频文件。
 - Android 已新增内置播放器，服务器曲目通过 `streamUrl` 串流播放，不把音乐文件保存到手机。
+- 已验证 `facebook/musicgen-small` 可在本机 CPU 跑通 2.5 秒烟测音频，并能被现有 BPM 分析识别出候选跑步 BPM。
+- 已新增 MusicGen-small 过夜生成 runbook 和脚本，支持独立环境、dry-run、断点续跑、`metadata.jsonl` 和生成后分析导入。
 - 已新增仓库根目录 `pytest.ini`，现在可在项目根目录直接运行 `backend\.venv\Scripts\python.exe -m pytest` 验证后端测试。
 
 尚未完成：
 
 - `generate_batch.py` 还未接入真实 ACE-Step CLI 或其他本地音乐生成器；当前是 WAV 占位生成器。
-- 尚未生成真实 `.wav` / `.flac` 音频样例。
-- 尚未把 AI 曲库导入流程封装成 CLI 或后台接口。
+- MusicGen-small 已有独立脚本，但尚未执行整夜批量生成。
+- 尚未把真实 MusicGen 输出批量导入 Android 可同步曲库。
 - Android 音乐页尚未同步真实 ACE-Step 曲库样例。
 
 ## Research Notes

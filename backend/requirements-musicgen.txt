@@ -1,0 +1,5 @@
+# Installed by backend/scripts/setup_musicgen_env.ps1.
+# Torch is installed separately from the official PyTorch CPU wheel index.
+transformers==5.8.1
+scipy==1.17.1
+accelerate==1.13.0

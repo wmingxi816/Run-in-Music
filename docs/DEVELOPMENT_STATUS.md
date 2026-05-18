@@ -135,6 +135,12 @@
   - `generate_batch.py` 可生成可播放 WAV 占位音频，用于跑通目录、曲库、播放器闭环；真实 ACE-Step 适配仍是下一步。
   - `/audio/generated/{track_id}` 可从 `backend/generated_music/` 安全读取并返回 WAV 文件。
   - 仓库根目录已新增 `pytest.ini`，可以直接从项目根目录运行后端 pytest。
+- 已准备 MusicGen-small 过夜生成流程：
+  - 已烟测 `facebook/musicgen-small`，本机 CPU 可以生成短音频。
+  - 已新增独立依赖环境脚本 `backend/scripts/setup_musicgen_env.ps1`。
+  - 已新增批量生成脚本 `backend/scripts/musicgen_batch.py`，支持 dry-run、resume、日志和 `metadata.jsonl`。
+  - 已新增分析导入脚本 `backend/scripts/analyze_import_generated.py`。
+  - 详细命令见 `docs/MUSICGEN_OVERNIGHT_RUNBOOK.md`。
 
 ### 测试与验证
 
@@ -164,6 +170,7 @@
   - AI 占位 WAV 批量生成
   - AI 生成音频批量分析包装
   - AI 曲目导入数据库
+  - AI 生成 manifest JSONL 往返解析
   - 生成音频路径安全校验
 - 已验证命令：
   - `.\gradlew.bat testDebugUnitTest`
@@ -196,6 +203,7 @@
 - 没有导入统计、重复歌曲合并策略、失败原因报表。
 - AI 音乐管线仍缺少真实 ACE-Step 生成器接入，`generate_batch.py` 当前是 WAV 占位生成器。
 - 尚未生成真实 AI 音频样例，也未把样例导入 Android 可同步曲库。
+- MusicGen-small 批量生成脚本已准备，但尚未启动整夜生成任务。
 
 ### 产品能力
 
@@ -370,3 +378,4 @@
 - 2026-05-18：后端测试入口固定到仓库根目录 `pytest.ini`，避免后续从项目根运行 pytest 时找不到 `backend/app` 包。
 - 2026-05-18：音乐文件不存用户手机；服务端保存音频文件并通过 `/audio/generated/{track_id}` 提供串流，Android Room 只缓存歌曲元数据和播放 URL。
 - 2026-05-18：Android 内置播放器先用系统 `MediaPlayer`，避免引入额外播放依赖；后续如果需要播放队列、进度条、后台音频通知，再升级到 Media3。
+- 2026-05-18：过夜生成先采用 `facebook/musicgen-small` 独立环境跑 CPU 版，作为流程验证；该模型权重仅适合 MVP 自测，正式商用前需要重新评估模型许可或替换模型。
