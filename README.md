@@ -39,6 +39,14 @@ Useful endpoints:
 - `GET /catalog/export`
 - `GET /songs/recommend?target_bpm=80`
 
+Run backend tests from the repository root:
+
+```powershell
+backend\.venv\Scripts\python.exe -m pytest
+```
+
+AI music PoC modules live under `backend/app/ai_music/`. The current slice can plan 100 generated running tracks, wrap BPM analysis results, and import accepted AI tracks into the existing catalog tables. Real local music generation is the next step.
+
 Example local flow:
 
 ```powershell

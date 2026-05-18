@@ -75,6 +75,22 @@ Android 端保持：
 - 本地推荐作为离线 fallback。
 - 音乐页展示 AI 曲库推荐卡片，后续可播放本地/服务端音频或跳转外链。
 
+## 当前实现状态
+
+已完成 PoC 骨架：
+
+- 已新增 `backend/app/ai_music/generation_plan.py`，可以确定性生成 100 首 AI 跑步音乐的生成任务，覆盖 65-115 BPM、不同跑步场景、风格、能量和 3-5 分钟时长。
+- 已新增 `backend/app/ai_music/analyze_batch.py`，可以批量接收生成音频元数据，调用 BPM 分析器，产出 `accepted/rejected` 状态、BPM、置信度和候选 BPM。
+- 已新增 `backend/app/ai_music/import_generated.py`，可以把通过分析的 AI 曲目写入现有 `songs`、`platform_tracks`、`audio_analysis` 表，其中平台标记为 `generated`，链接格式为 `generated://<track_id>`。
+- 已新增仓库根目录 `pytest.ini`，现在可在项目根目录直接运行 `backend\.venv\Scripts\python.exe -m pytest` 验证后端测试。
+
+尚未完成：
+
+- `generate_batch.py` 还未接入真实 ACE-Step CLI 或其他本地音乐生成器。
+- 尚未生成真实 `.wav` / `.flac` 音频样例。
+- 尚未把 AI 曲库导入流程封装成 CLI 或后台接口。
+- Android 音乐页仍然使用占位 AI 标签，尚未同步真实 AI 曲库。
+
 ## Research Notes
 
 ### 推荐生成模型：ACE-Step

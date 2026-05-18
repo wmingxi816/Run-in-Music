@@ -8,6 +8,8 @@
 
 **Tech Stack:** Python, FastAPI backend modules, SQLAlchemy, librosa via existing `services.bpm`, pytest.
 
+**Implementation Status (2026-05-18):** Code, tests, documentation updates, and root-level backend pytest configuration are complete. Real audio generation through ACE-Step is intentionally deferred to the next plan.
+
 ---
 
 ### Task 1: Generation Plan

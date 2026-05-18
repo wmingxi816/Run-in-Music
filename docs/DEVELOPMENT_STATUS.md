@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-- 当前版本：Alpha 0.2 三栏首页 + GPS 跑步记录 + 诊断日志导出
+- 当前版本：Alpha 0.2 三栏首页 + GPS 跑步记录 + 诊断日志导出 + AI 音乐管线 PoC
 - 当前日期：2026-05-18
 - 仓库地址：https://github.com/wmingxi816/Run-in-Music
 - 当前主线分支：`main`
@@ -20,6 +20,9 @@
   - `15988cb Add diagnostic export payload builder`
   - `e5dc2d9 Add structured app event storage`
   - `11856d3 Add diagnostic log export UI`
+
+  - `cb36518 Add AI music plan and tabbed home UI`
+  - `661254e Plan AI music pipeline PoC`
 
 ## 已完成
 
@@ -110,6 +113,13 @@
   - Android 保留本地 Room 缓存和离线推荐 fallback。
   - 规划文档见 `docs/AI_MUSIC_MVP_PLAN.md`。
 
+- 已实现 AI 音乐管线 PoC 骨架：
+  - `generation_plan.py` 可生成 100 条确定性的 AI 跑步音乐生成任务。
+  - `analyze_batch.py` 可批量分析生成音频元数据，并输出 BPM、置信度、候选 BPM、接受 / 拒绝状态。
+  - `import_generated.py` 可把通过分析的 AI 曲目导入 `songs`、`platform_tracks`、`audio_analysis`。
+  - 生成曲目的平台标记为 `generated`，第一版链接格式为 `generated://<track_id>`。
+  - 仓库根目录已新增 `pytest.ini`，可以直接从项目根目录运行后端 pytest。
+
 ### 测试与验证
 
 - Android 单元测试已覆盖：
@@ -133,6 +143,9 @@
   - 网易云 song id 提取
   - provider registry
   - 推荐过滤和排序
+  - AI 音乐生成任务规划
+  - AI 生成音频批量分析包装
+  - AI 曲目导入数据库
 - 已验证命令：
   - `.\gradlew.bat testDebugUnitTest`
   - `.\gradlew.bat assembleDebug`
@@ -164,6 +177,8 @@
 - `/analysis/jobs` 当前需要调用方提供 `audio_url`。
 - 后台没有管理界面或 CLI 导入工具。
 - 没有导入统计、重复歌曲合并策略、失败原因报表。
+- AI 音乐管线仍缺少真实生成器接入，`generate_batch.py` 未实现。
+- 尚未生成真实 AI 音频样例，也未把样例导入 Android 可同步曲库。
 
 ### 产品能力
 
@@ -231,6 +246,33 @@
 - `/catalog/export` 能导出新增曲库。
 - Android 点击刷新后能看到新增可推荐歌曲。
 
+### P1：AI 音乐生成管线 PoC 闭环
+
+目标：让“自建 AI 曲库”从规划进入可验证样例阶段，先跑通 5 首歌，再扩展到 100 首。
+
+已完成：
+
+- 生成 100 首 AI 跑步音乐的任务规划。
+- 批量分析包装，支持 accepted/rejected 和候选 BPM。
+- 数据库导入逻辑，复用现有曲库表。
+- 后端测试覆盖生成计划、批量分析和导入。
+
+仍需：
+
+- 接入真实本地生成器，首选 ACE-Step CLI，保留替换为其他生成器的适配层。
+- 新增 `generate_batch.py`，支持 dry-run、断点续跑、输出音频和 metadata。
+- 生成 5 首 3-5 分钟样例音频。
+- 对样例音频运行 BPM 分析并导入数据库。
+- 从 `/catalog/export` 导出 AI 曲目，并在 Android 音乐页同步查看。
+
+验收标准：
+
+- `backend/generated_music/` 下有 5 首样例音频和对应 metadata。
+- 后端能分析出 BPM、候选 BPM 和置信度。
+- 数据库中出现 `provider=generated` 的曲目。
+- `/catalog/export` 能导出这些 AI 曲目。
+- Android 点击刷新后能看到 AI 曲库推荐卡片。
+
 ### P2：Android 曲库同步体验
 
 目标：让后台同步对真机和非开发者更友好。
@@ -291,7 +333,7 @@
 ## 当前工作项
 
 - 进行中：Alpha 0.2 GPS 跑步记录和一键诊断日志已实现并通过本地构建，下一步是真机 / 模拟器 GPS 验收和日志 zip 内容验收。
-- 新增方向：下一阶段可启动 AI 音乐生成管线 PoC，先生成 5 首样例并跑通 BPM 分析、导入、推荐、Android 同步闭环。
+- 进行中：AI 音乐生成管线 PoC 已完成后端 plan / analyze / import 骨架，下一步接入真实生成器并生成 5 首样例音频。
 
 ## Decision Log
 
@@ -307,3 +349,5 @@
 - 2026-05-18：诊断包通过 `FileProvider` 暴露 cache 下的 zip，不直接暴露 Room 数据库文件。
 - 2026-05-18：App 主界面改为底部三栏：跑步负责记录和训练计划，音乐负责步频测量和歌曲推荐，我的负责个人摘要、曲库同步和日志导出。
 - 2026-05-18：AI 音乐 MVP 规划为服务端批量生成和分析，后端作为权威推荐源，Android 保留本地推荐作为离线 fallback。
+- 2026-05-18：AI 生成曲目第一版复用现有曲库表，不新增 `generated_tracks` 表；平台统一标记为 `generated`，音频链接先使用 `generated://<track_id>` 占位，等真实音频托管方式确定后再替换。
+- 2026-05-18：后端测试入口固定到仓库根目录 `pytest.ini`，避免后续从项目根运行 pytest 时找不到 `backend/app` 包。
