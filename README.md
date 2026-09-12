@@ -39,10 +39,21 @@ uvicorn app.main:app --reload
 
 - `POST /providers/resolve-link`
 - `POST /crawler/jobs`
+- `POST /crawler/batch`
 - `POST /analysis/jobs`
 - `GET /catalog/export`
 - `GET /audio/generated/{track_id}`
 - `GET /songs/recommend?target_bpm=80`
+
+批量导入示例（一次提交多条 QQ/网易云链接）：
+
+```powershell
+Invoke-RestMethod -Method Post http://127.0.0.1:8000/crawler/batch `
+  -ContentType "application/json" `
+  -Body '{"urls":["https://y.qq.com/n/ryqq/songDetail/000QhABT1zNwjC","https://music.163.com/song?id=1901371647"]}'
+```
+
+返回字段包含 `total` / `succeeded` / `failed` / `missing_bpm` / `duplicates` 和每条链接的 `results`。单条解析失败不会影响其他链接，重复平台歌曲不会重复建歌。
 
 从仓库根目录运行后端测试：
 

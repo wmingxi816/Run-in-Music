@@ -17,3 +17,4 @@ run_in_music.db
 backend/generated_music/
 
 *.iml
+.claude/

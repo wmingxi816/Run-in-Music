@@ -41,6 +41,29 @@ class CrawlJobResponse(BaseModel):
     song: SongOut | None = None
 
 
+class BatchCrawlRequest(BaseModel):
+    urls: list[str] = Field(default_factory=list)
+
+
+class BatchCrawlItemResult(BaseModel):
+    url: str
+    status: str
+    provider: str | None = None
+    error: str | None = None
+    missing_bpm: bool = False
+    duplicate: bool = False
+    song: SongOut | None = None
+
+
+class BatchCrawlResponse(BaseModel):
+    total: int
+    succeeded: int
+    failed: int
+    missing_bpm: int
+    duplicates: int
+    results: list[BatchCrawlItemResult] = Field(default_factory=list)
+
+
 class AnalysisJobResponse(BaseModel):
     status: str
     message: str

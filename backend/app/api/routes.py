@@ -12,9 +12,9 @@ from app.core.config import get_settings
 from app.core.database import get_session
 from app.models import AudioAnalysis, CrawlJob, Song
 from app.providers.registry import provider_for_url
-from app.schemas.song import AnalysisJobRequest, AnalysisJobResponse, CrawlJobRequest, CrawlJobResponse, ResolveLinkRequest, ResolveLinkResponse
+from app.schemas.song import AnalysisJobRequest, AnalysisJobResponse, BatchCrawlRequest, BatchCrawlResponse, CrawlJobRequest, CrawlJobResponse, ResolveLinkRequest, ResolveLinkResponse
 from app.services.bpm import analyze_audio_file, candidate_bpms
-from app.services.catalog import list_catalog, song_to_out, upsert_resolved_track
+from app.services.catalog import list_catalog, process_batch_urls, song_to_out, upsert_resolved_track
 from app.services.recommendation import RecommendationInput, recommend_songs
 
 router = APIRouter()
@@ -62,6 +62,13 @@ async def create_crawl_job(payload: CrawlJobRequest, session: Session = Depends(
         job.message = str(exc)
         session.commit()
         return CrawlJobResponse(id=job.id, status=job.status, message=job.message, song=None)
+
+
+@router.post("/crawler/batch", response_model=BatchCrawlResponse)
+async def create_crawl_batch(payload: BatchCrawlRequest, session: Session = Depends(get_session)) -> BatchCrawlResponse:
+    if not payload.urls:
+        raise HTTPException(status_code=400, detail="urls must contain at least one link")
+    return await process_batch_urls(session, payload.urls)
 
 
 @router.post("/analysis/jobs", response_model=AnalysisJobResponse)

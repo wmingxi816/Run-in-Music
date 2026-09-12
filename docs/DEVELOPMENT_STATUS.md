@@ -141,6 +141,14 @@
   - 已新增批量生成脚本 `backend/scripts/musicgen_batch.py`，支持 dry-run、resume、日志和 `metadata.jsonl`。
   - 已新增分析导入脚本 `backend/scripts/analyze_import_generated.py`。
   - 详细命令见 `docs/MUSICGEN_OVERNIGHT_RUNBOOK.md`。
+- 已实现后台批量歌曲导入：
+  - 新增 `POST /crawler/batch`，请求体格式 `{ "urls": ["..."] }`。
+  - 单条链接独立解析，失败不影响其他链接。
+  - 返回 `total` / `succeeded` / `failed` / `missing_bpm` / `duplicates` 与每条结果。
+  - 重复平台歌曲只刷新元数据，不重复建歌。
+  - 每条导入仍写入 `crawl_jobs` 单独记录，便于审计。
+  - README 增加批量导入示例。
+  - 测试覆盖混合成功/失败、缺少 BPM、重复平台去重、空请求和端到端 HTTP 调用。
 
 ### 测试与验证
 
